@@ -1,4 +1,3 @@
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
@@ -24,7 +23,7 @@ const TABLES: Table[] = [
 function generateQRCodeDataURL(tableNumber: string): string {
   // Generate a simple QR code URL using QR server API
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-    `${'http://192.168.100.26'}/table-order?table=${tableNumber}`
+    `${window.location.origin}/table-order?table=${tableNumber}`
   )}`;
   return qrUrl;
 }
@@ -183,8 +182,7 @@ export default function TableQRCodes() {
   };
 
   return (
-    <MainLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Table QR Codes</h1>
@@ -276,7 +274,6 @@ export default function TableQRCodes() {
             );
           })}
         </div>
-      </div>
-    </MainLayout>
+    </div>
   );
 }

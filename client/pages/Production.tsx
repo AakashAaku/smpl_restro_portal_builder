@@ -1,4 +1,3 @@
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -150,8 +149,7 @@ export default function Production() {
   };
 
   return (
-    <MainLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
@@ -503,7 +501,6 @@ export default function Production() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
-    </MainLayout>
+    </div>
   );
 }

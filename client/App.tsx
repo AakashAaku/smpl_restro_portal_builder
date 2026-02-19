@@ -28,12 +28,17 @@ import Accounting from "./pages/Accounting";
 import TableManagement from "./pages/TableManagement";
 import TableQRCodes from "./pages/TableQRCodes";
 import Promotions from "./pages/Promotions";
+import PurchaseManagement from "./pages/PurchaseManagement";
+import DailyStockReport from "./pages/DailyStockReport";
+import FinishedGoods from "./pages/FinishedGoods";
+import EventConfiguration from "./pages/EventConfiguration";
 
 // Customer Pages
 import CustomerHome from "./pages/customer/CustomerHome";
 import CustomerCheckout from "./pages/customer/CustomerCheckout";
 import CustomerOrders from "./pages/customer/CustomerOrders";
 import TableOrder from "./pages/customer/TableOrder";
+import EventBooking from "./pages/customer/EventBooking";
 
 // Layout
 import { MainLayout } from "./components/layout/MainLayout";
@@ -220,6 +225,38 @@ const App = () => {
                 </AdminRoute>
               }
             />
+            <Route
+              path="/admin/purchases"
+              element={
+                <AdminRoute>
+                  <PurchaseManagement />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/stock-report"
+              element={
+                <AdminRoute>
+                  <DailyStockReport />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/finished-goods"
+              element={
+                <AdminRoute>
+                  <FinishedGoods />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/events"
+              element={
+                <AdminRoute>
+                  <EventConfiguration />
+                </AdminRoute>
+              }
+            />
 
             {/* Customer Portal */}
             <Route
@@ -243,6 +280,14 @@ const App = () => {
               element={
                 <CustomerRoute>
                   <CustomerOrders />
+                </CustomerRoute>
+              }
+            />
+            <Route
+              path="/customer/events"
+              element={
+                <CustomerRoute>
+                  <EventBooking />
                 </CustomerRoute>
               }
             />

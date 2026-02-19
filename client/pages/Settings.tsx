@@ -1,4 +1,3 @@
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,8 +26,7 @@ export default function Settings() {
   const [offlineMode, setOfflineMode] = useState(true);
 
   return (
-    <MainLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -400,7 +398,6 @@ export default function Settings() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-    </MainLayout>
+    </div>
   );
 }

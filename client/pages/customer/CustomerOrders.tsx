@@ -100,17 +100,10 @@ export default function CustomerOrders() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-card border-b border-border shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Your Orders</h1>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleBackToMenu}
-              className="gap-2"
-            >
-              Continue Shopping
-            </Button>
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          {/* Top Row */}
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-2xl font-bold">Your Orders</h1>
             <Button
               variant="ghost"
               size="sm"
@@ -119,6 +112,34 @@ export default function CustomerOrders() {
             >
               <LogOut className="h-4 w-4" />
               Logout
+            </Button>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBackToMenu}
+              className="gap-2"
+            >
+              🍽️ Menu
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => navigate("/customer/orders")}
+              className="gap-2"
+            >
+              📦 My Orders
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/customer/events")}
+              className="gap-2"
+            >
+              🎉 Book Event
             </Button>
           </div>
         </div>

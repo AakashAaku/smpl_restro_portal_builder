@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -92,8 +91,7 @@ export default function Accounting() {
   ).toFixed(1);
 
   return (
-    <MainLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
@@ -486,7 +484,6 @@ export default function Accounting() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </MainLayout>
+    </div>
   );
 }

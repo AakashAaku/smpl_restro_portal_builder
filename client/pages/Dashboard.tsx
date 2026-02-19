@@ -1,4 +1,3 @@
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -70,8 +69,7 @@ const StatCard = ({
 
 export default function Dashboard() {
   return (
-    <MainLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -209,7 +207,6 @@ export default function Dashboard() {
             </Button>
           </CardContent>
         </Card>
-      </div>
-    </MainLayout>
+    </div>
   );
 }

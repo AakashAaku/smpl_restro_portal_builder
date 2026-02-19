@@ -1,4 +1,3 @@
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,9 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
-import { Eye, Search, Filter, Clock, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
-import { Order, getAllOrders, updateOrderStatus, getOrderStatistics } from "@/lib/orders";
+import { Eye, Search, Filter, Clock, CheckCircle, AlertCircle, Trash2, Plus } from "lucide-react";
+import { Order, getAllOrders, updateOrderStatus, getOrderStatistics, createOrder, saveOrder } from "@/lib/orders";
+import { generateBill, type BillItem } from "@/lib/billing";
 
 interface OrderDisplay extends Order {
   itemCount: number;
@@ -46,12 +47,26 @@ const statusColors = {
   cancelled: { bg: "bg-red-100", text: "text-red-800", label: "Cancelled" },
 };
 
+const MENU_ITEMS = [
+  { id: 1, name: "Paneer Tikka", price: 280 },
+  { id: 2, name: "Butter Chicken", price: 320 },
+  { id: 3, name: "Dal Makhani", price: 250 },
+  { id: 4, name: "Biryani", price: 300 },
+  { id: 5, name: "Samosa", price: 40 },
+  { id: 6, name: "Spring Roll", price: 50 },
+  { id: 7, name: "Garlic Naan", price: 60 },
+  { id: 8, name: "Lassi", price: 80 },
+  { id: 9, name: "Gulab Jamun", price: 120 },
+  { id: 10, name: "Kheer", price: 100 },
+];
+
 export default function OrderManagement() {
   const [orders, setOrders] = useState<OrderDisplay[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<OrderDisplay | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
   const [stats, setStats] = useState({
     totalOrders: 0,
     todayOrders: 0,
@@ -60,6 +75,16 @@ export default function OrderManagement() {
     dineInOrders: 0,
     deliveryOrders: 0,
   });
+
+  // Manual order form state
+  const [manualOrderForm, setManualOrderForm] = useState({
+    customerName: "",
+    customerPhone: "",
+    orderType: "takeaway" as "delivery" | "takeaway",
+    paymentMethod: "cash",
+  });
+  const [manualOrderItems, setManualOrderItems] = useState<BillItem[]>([]);
+  const [manualOrderStep, setManualOrderStep] = useState(1);
 
   // Load orders on mount and set up real-time listening
   useEffect(() => {
@@ -132,15 +157,105 @@ export default function OrderManagement() {
 
   const statusOptions = ["pending", "confirmed", "preparing", "ready", "delivered"];
 
+  const handleAddItemToManualOrder = (itemId: number) => {
+    const menuItem = MENU_ITEMS.find((m) => m.id === itemId);
+    if (!menuItem) return;
+
+    const existingItem = manualOrderItems.find((item) => item.id === itemId);
+    if (existingItem) {
+      existingItem.quantity += 1;
+      existingItem.unitPrice = menuItem.price;
+      setManualOrderItems([...manualOrderItems]);
+    } else {
+      setManualOrderItems([
+        ...manualOrderItems,
+        {
+          id: itemId,
+          name: menuItem.name,
+          quantity: 1,
+          unitPrice: menuItem.price,
+        },
+      ]);
+    }
+  };
+
+  const handleRemoveItemFromManualOrder = (itemId: number) => {
+    setManualOrderItems(manualOrderItems.filter((item) => item.id !== itemId));
+  };
+
+  const handleCreateManualOrder = () => {
+    if (!manualOrderForm.customerName || !manualOrderForm.customerPhone || manualOrderItems.length === 0) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    const bill = generateBill(
+      manualOrderItems,
+      manualOrderForm.customerName,
+      manualOrderForm.customerPhone,
+      manualOrderForm.paymentMethod,
+      0,
+      manualOrderForm.orderType === "delivery" ? 50 : 0
+    );
+
+    const orderId = `ORD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const orderItems = manualOrderItems.map((item) => ({
+      ...item,
+      amount: item.quantity * item.unitPrice,
+    }));
+
+    const order = createOrder(
+      orderId,
+      bill.billNo,
+      manualOrderForm.customerName,
+      manualOrderForm.customerPhone,
+      orderItems,
+      bill.subtotal,
+      bill.discountAmount,
+      0,
+      bill.deliveryFee,
+      bill.vatAmount,
+      bill.totalAmount,
+      manualOrderForm.paymentMethod,
+      manualOrderForm.orderType,
+      undefined,
+      manualOrderForm.orderType === "delivery" ? "Counter Entry - Delivery" : undefined,
+      undefined,
+      "Manual counter entry",
+      bill
+    );
+
+    saveOrder(order);
+
+    // Reset form
+    setManualOrderForm({
+      customerName: "",
+      customerPhone: "",
+      orderType: "takeaway",
+      paymentMethod: "cash",
+    });
+    setManualOrderItems([]);
+    setManualOrderStep(1);
+    setIsManualOrderOpen(false);
+    alert("Order created successfully!");
+  };
+
   return (
-    <MainLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage and track all customer orders
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage and track all customer orders
+            </p>
+          </div>
+          <Dialog open={isManualOrderOpen} onOpenChange={setIsManualOrderOpen}>
+            <Button className="gap-2" onClick={() => setIsManualOrderOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Manual Order
+            </Button>
+          </Dialog>
         </div>
 
         {/* Filters */}
@@ -418,7 +533,202 @@ export default function OrderManagement() {
             )}
           </DialogContent>
         </Dialog>
-      </div>
-    </MainLayout>
+
+        {/* Manual Order Dialog */}
+        <Dialog open={isManualOrderOpen} onOpenChange={setIsManualOrderOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create Manual Order</DialogTitle>
+            </DialogHeader>
+
+            <Tabs value={manualOrderStep.toString()} onValueChange={(value) => setManualOrderStep(parseInt(value))}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="1">Customer</TabsTrigger>
+                <TabsTrigger value="2">Items</TabsTrigger>
+                <TabsTrigger value="3">Payment</TabsTrigger>
+              </TabsList>
+
+              {/* Step 1: Customer Info */}
+              <TabsContent value="1" className="space-y-4">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="cust-name">Customer Name *</Label>
+                    <Input
+                      id="cust-name"
+                      value={manualOrderForm.customerName}
+                      onChange={(e) =>
+                        setManualOrderForm({
+                          ...manualOrderForm,
+                          customerName: e.target.value,
+                        })
+                      }
+                      placeholder="John Doe"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cust-phone">Phone Number *</Label>
+                    <Input
+                      id="cust-phone"
+                      value={manualOrderForm.customerPhone}
+                      onChange={(e) =>
+                        setManualOrderForm({
+                          ...manualOrderForm,
+                          customerPhone: e.target.value,
+                        })
+                      }
+                      placeholder="9876543210"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="order-type">Order Type *</Label>
+                    <Select
+                      value={manualOrderForm.orderType}
+                      onValueChange={(value: any) =>
+                        setManualOrderForm({
+                          ...manualOrderForm,
+                          orderType: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="takeaway">Takeaway</SelectItem>
+                        <SelectItem value="delivery">Delivery</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={() => setManualOrderStep(2)}
+                    disabled={!manualOrderForm.customerName || !manualOrderForm.customerPhone}
+                  >
+                    Next: Select Items
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Step 2: Select Items */}
+              <TabsContent value="2" className="space-y-4">
+                <div>
+                  <Label className="mb-3 block">Select Items</Label>
+                  <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto border rounded p-4">
+                    {MENU_ITEMS.map((item) => (
+                      <Button
+                        key={item.id}
+                        variant="outline"
+                        className="flex flex-col items-start h-auto p-3 text-left"
+                        onClick={() => handleAddItemToManualOrder(item.id)}
+                      >
+                        <p className="font-medium text-sm">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">₹{item.price}</p>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {manualOrderItems.length > 0 && (
+                  <div className="border rounded p-4">
+                    <Label className="mb-3 block">Selected Items</Label>
+                    <div className="space-y-2">
+                      {manualOrderItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between p-2 bg-secondary rounded"
+                        >
+                          <div>
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              ₹{item.unitPrice} x {item.quantity}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveItemFromManualOrder(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setManualOrderStep(1)}>
+                    Back
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={() => setManualOrderStep(3)}
+                    disabled={manualOrderItems.length === 0}
+                  >
+                    Next: Payment
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Step 3: Payment */}
+              <TabsContent value="3" className="space-y-4">
+                <div>
+                  <Label htmlFor="payment-method">Payment Method *</Label>
+                  <Select
+                    value={manualOrderForm.paymentMethod}
+                    onValueChange={(value) =>
+                      setManualOrderForm({
+                        ...manualOrderForm,
+                        paymentMethod: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="border rounded p-4 bg-secondary">
+                  <p className="font-semibold mb-3">Order Summary</p>
+                  <div className="space-y-2 text-sm">
+                    {manualOrderItems.map((item) => (
+                      <div key={item.id} className="flex justify-between">
+                        <span>
+                          {item.name} x {item.quantity}
+                        </span>
+                        <span>₹{(item.quantity * item.unitPrice).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <div className="border-t pt-2 mt-2 font-semibold flex justify-between">
+                      <span>Subtotal</span>
+                      <span>
+                        ₹
+                        {manualOrderItems
+                          .reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setManualOrderStep(2)}>
+                    Back
+                  </Button>
+                  <Button className="flex-1" onClick={handleCreateManualOrder}>
+                    Create Order
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
+    </div>
   );
 }
