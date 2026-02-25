@@ -17,765 +17,502 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
-import { Plus, AlertTriangle, TrendingDown, Package, Clock, Trash2 } from "lucide-react";
-
-interface Ingredient {
-  id: number;
-  name: string;
-  unit: string;
-  currentStock: number;
-  reorderLevel: number;
-  costPerUnit: number;
-  isLowStock?: boolean;
-  expiryDate?: string;
-  batchNumber?: string;
-}
-
-interface Supplier {
-  id: number;
-  name: string;
-  contact: string;
-  email: string;
-  address: string;
-}
-
-interface WasteRecord {
-  id: number;
-  ingredientName: string;
-  quantity: number;
-  unit: string;
-  reason: "Expired" | "Damaged" | "Spoiled" | "Returned" | "Other";
-  date: string;
-  cost: number;
-}
-
-const mockIngredients: Ingredient[] = [
-  {
-    id: 1,
-    name: "Paneer",
-    unit: "kg",
-    currentStock: 5.5,
-    reorderLevel: 3,
-    costPerUnit: 280,
-    isLowStock: false,
-    expiryDate: "2024-02-15",
-    batchNumber: "B001",
-  },
-  {
-    id: 2,
-    name: "Chicken Breast",
-    unit: "kg",
-    currentStock: 8.2,
-    reorderLevel: 5,
-    costPerUnit: 180,
-    isLowStock: false,
-    expiryDate: "2024-02-05",
-    batchNumber: "B002",
-  },
-  {
-    id: 3,
-    name: "Butter",
-    unit: "kg",
-    currentStock: 2.1,
-    reorderLevel: 2,
-    costPerUnit: 420,
-    isLowStock: true,
-    expiryDate: "2024-03-10",
-    batchNumber: "B003",
-  },
-  {
-    id: 4,
-    name: "Tomato Sauce",
-    unit: "liters",
-    currentStock: 1.2,
-    reorderLevel: 3,
-    costPerUnit: 150,
-    isLowStock: true,
-    expiryDate: "2024-02-08",
-    batchNumber: "B004",
-  },
-];
-
-const mockWasteRecords: WasteRecord[] = [
-  {
-    id: 1,
-    ingredientName: "Paneer",
-    quantity: 0.5,
-    unit: "kg",
-    reason: "Expired",
-    date: "2024-01-18",
-    cost: 140,
-  },
-  {
-    id: 2,
-    ingredientName: "Chicken",
-    quantity: 1.2,
-    unit: "kg",
-    reason: "Spoiled",
-    date: "2024-01-15",
-    cost: 216,
-  },
-  {
-    id: 3,
-    ingredientName: "Milk",
-    quantity: 2,
-    unit: "liters",
-    reason: "Damaged",
-    date: "2024-01-12",
-    cost: 80,
-  },
-];
-
-const mockSuppliers: Supplier[] = [
-  {
-    id: 1,
-    name: "Fresh Foods Co",
-    contact: "9876543210",
-    email: "sales@freshfoods.com",
-    address: "123 Market Street, Mumbai",
-  },
-  {
-    id: 2,
-    name: "Dairy Essentials",
-    contact: "9876543211",
-    email: "orders@dairyess.com",
-    address: "456 Dairy Road, Pune",
-  },
-];
+import { useState, useEffect } from "react";
+import {
+  Plus,
+  Search,
+  AlertTriangle,
+  TrendingDown,
+  Package,
+  TrendingUp,
+} from "lucide-react";
+import {
+  Ingredient,
+  Supplier,
+  getIngredients,
+  getSuppliers,
+  createIngredient,
+  createSupplier,
+  recordStockMovement,
+  getInventoryStats
+} from "@/lib/inventory-api";
+import { toast } from "sonner";
 
 export default function Inventory() {
-  const [ingredients, setIngredients] = useState<Ingredient[]>(mockIngredients);
-  const [suppliers, setSuppliers] = useState<Supplier[]>(mockSuppliers);
-  const [wasteRecords, setWasteRecords] = useState<WasteRecord[]>(mockWasteRecords);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isAddingIngredient, setIsAddingIngredient] = useState(false);
+  const [isRecordingWaste, setIsRecordingWaste] = useState(false);
   const [isAddingSupplier, setIsAddingSupplier] = useState(false);
-  const [isAddingWaste, setIsAddingWaste] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const lowStockCount = ingredients.filter((i) => i.isLowStock).length;
-  const totalValue = ingredients.reduce(
-    (sum, i) => sum + i.currentStock * i.costPerUnit,
-    0
+  // Form states
+  const [ingredientForm, setIngredientForm] = useState<Omit<Ingredient, "id">>({
+    name: "",
+    unit: "kg",
+    currentStock: 0,
+    reorderLevel: 5,
+    costPerUnit: 0,
+    supplierId: undefined,
+  });
+
+  const [wasteForm, setWasteForm] = useState({
+    ingredientId: "",
+    quantity: "",
+    reason: "damaged",
+    notes: "",
+  });
+
+  const [supplierForm, setSupplierForm] = useState<Omit<Supplier, "id">>({
+    name: "",
+    contact: "",
+    email: "",
+    address: "",
+    paymentTerms: "Net 30",
+  });
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [ingData, supData, statsData] = await Promise.all([
+        getIngredients(),
+        getSuppliers(),
+        getInventoryStats()
+      ]);
+      setIngredients(ingData);
+      setSuppliers(supData);
+      setStats(statsData);
+    } catch (error) {
+      toast.error("Failed to load inventory data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredIngredients = ingredients.filter((item) =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddIngredient = (e: React.FormEvent) => {
+  const handleAddIngredient = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsAddingIngredient(false);
+    try {
+      await createIngredient({
+        ...ingredientForm,
+        currentStock: parseFloat(ingredientForm.currentStock.toString()),
+        reorderLevel: parseFloat(ingredientForm.reorderLevel.toString()),
+        costPerUnit: parseFloat(ingredientForm.costPerUnit.toString()),
+      });
+      toast.success("Ingredient added successfully");
+      setIsAddingIngredient(false);
+      loadData();
+      resetIngredientForm();
+    } catch (error) {
+      toast.error("Failed to add ingredient");
+    }
+  };
+
+  const handleAddSupplier = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createSupplier(supplierForm);
+      toast.success("Supplier added successfully");
+      setIsAddingSupplier(false);
+      loadData();
+      resetSupplierForm();
+    } catch (error) {
+      toast.error("Failed to add supplier");
+    }
+  };
+
+  const handleRecordWaste = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wasteForm.ingredientId || !wasteForm.quantity) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    try {
+      await recordStockMovement({
+        ingredientId: parseInt(wasteForm.ingredientId),
+        type: wasteForm.reason === "damaged" ? "damage" : "out",
+        quantity: parseFloat(wasteForm.quantity),
+        reference: "Waste Recording",
+        notes: wasteForm.notes
+      });
+      toast.success("Waste recorded successfully");
+      setIsRecordingWaste(false);
+      loadData();
+      setWasteForm({ ingredientId: "", quantity: "", reason: "damaged", notes: "" });
+    } catch (error) {
+      toast.error("Failed to record waste");
+    }
+  };
+
+  const resetIngredientForm = () => {
+    setIngredientForm({
+      name: "",
+      unit: "kg",
+      currentStock: 0,
+      reorderLevel: 5,
+      costPerUnit: 0,
+    });
+  };
+
+  const resetSupplierForm = () => {
+    setSupplierForm({
+      name: "",
+      contact: "",
+      email: "",
+      address: "",
+      paymentTerms: "Net 30",
+    });
   };
 
   return (
     <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Inventory Management
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Track ingredients, suppliers, and stock levels
-            </p>
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
+          <p className="text-muted-foreground mt-2">
+            Track stock levels, waste, and supplier performance
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Dialog open={isRecordingWaste} onOpenChange={setIsRecordingWaste}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Record Waste
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Record Food Waste</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleRecordWaste} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ingredient">Ingredient</Label>
+                  <Select value={wasteForm.ingredientId} onValueChange={(val) => setWasteForm({ ...wasteForm, ingredientId: val })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select ingredient" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ingredients.map((ing) => (
+                        <SelectItem key={ing.id} value={ing.id.toString()}>
+                          {ing.name} ({ing.unit})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="waste-qty">Quantity</Label>
+                  <Input
+                    id="waste-qty"
+                    type="number"
+                    placeholder="0.00"
+                    value={wasteForm.quantity}
+                    onChange={(e) => setWasteForm({ ...wasteForm, quantity: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Reason</Label>
+                  <Select value={wasteForm.reason} onValueChange={(val) => setWasteForm({ ...wasteForm, reason: val })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="damaged">Damage/Spillage</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                      <SelectItem value="quality">Quality Check</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="waste-notes">Notes</Label>
+                  <Input
+                    id="waste-notes"
+                    placeholder="Additional details..."
+                    value={wasteForm.notes}
+                    onChange={(e) => setWasteForm({ ...wasteForm, notes: e.target.value })}
+                  />
+                </div>
+                <Button type="submit" className="w-full">Submit Waste Record</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isAddingIngredient} onOpenChange={setIsAddingIngredient}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Ingredient
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Ingredient</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddIngredient} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ing-name">Ingredient Name</Label>
+                  <Input
+                    id="ing-name"
+                    required
+                    value={ingredientForm.name}
+                    onChange={(e) => setIngredientForm({ ...ingredientForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ing-unit">Unit</Label>
+                    <Select value={ingredientForm.unit} onValueChange={(val) => setIngredientForm({ ...ingredientForm, unit: val })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="kg">Kilograms (kg)</SelectItem>
+                        <SelectItem value="liters">Liters (l)</SelectItem>
+                        <SelectItem value="pieces">Pieces (pcs)</SelectItem>
+                        <SelectItem value="packs">Packs</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ing-stock">Current Stock</Label>
+                    <Input
+                      id="ing-stock"
+                      type="number"
+                      required
+                      value={ingredientForm.currentStock}
+                      onChange={(e) => setIngredientForm({ ...ingredientForm, currentStock: parseFloat(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ing-reorder">Reorder Level</Label>
+                    <Input
+                      id="ing-reorder"
+                      type="number"
+                      required
+                      value={ingredientForm.reorderLevel}
+                      onChange={(e) => setIngredientForm({ ...ingredientForm, reorderLevel: parseFloat(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ing-cost">Cost per Unit</Label>
+                    <Input
+                      id="ing-cost"
+                      type="number"
+                      required
+                      value={ingredientForm.costPerUnit}
+                      onChange={(e) => setIngredientForm({ ...ingredientForm, costPerUnit: parseFloat(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ing-supplier">Default Supplier</Label>
+                  <Select value={ingredientForm.supplierId?.toString()} onValueChange={(val) => setIngredientForm({ ...ingredientForm, supplierId: parseInt(val) })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((sup) => (
+                        <SelectItem key={sup.id} value={sup.id.toString()}>{sup.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full">Add Ingredient</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Value</p>
+                <p className="text-2xl font-bold mt-2">₹{stats?.totalInventoryValue?.toLocaleString() || "0"}</p>
+              </div>
+              <TrendingUp className="h-6 w-6 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Items</p>
+                <p className="text-2xl font-bold mt-2">{stats?.itemCount || 0}</p>
+              </div>
+              <Package className="h-6 w-6 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Low Stock</p>
+                <p className="text-2xl font-bold mt-2">{stats?.lowStockCount || 0}</p>
+              </div>
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Monthly Waste</p>
+                <p className="text-2xl font-bold mt-2">₹{stats?.monthlyWaste || "0"}</p>
+              </div>
+              <TrendingDown className="h-6 w-6 text-amber-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="ingredients" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
+          <TabsTrigger value="expiry">Stock Status</TabsTrigger>
+          <TabsTrigger value="waste">Waste Management</TabsTrigger>
+          <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ingredients" className="space-y-4">
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search ingredients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Items</p>
-                  <p className="text-2xl font-bold mt-2">{ingredients.length}</p>
-                </div>
-                <Package className="h-6 w-6 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Low Stock Items
-                  </p>
-                  <p className="text-2xl font-bold mt-2">{lowStockCount}</p>
-                </div>
-                <AlertTriangle className="h-6 w-6 text-amber-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Total Inventory Value
-                  </p>
-                  <p className="text-2xl font-bold mt-2">
-                    ₹{Math.round(totalValue).toLocaleString()}
-                  </p>
-                </div>
-                <TrendingDown className="h-6 w-6 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Suppliers</p>
-                  <p className="text-2xl font-bold mt-2">{suppliers.length}</p>
-                </div>
-                <Package className="h-6 w-6 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Low Stock Alert */}
-        {lowStockCount > 0 && (
-          <Card className="border-amber-200 bg-amber-50">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-                <div>
-                  <p className="font-medium text-amber-900">
-                    {lowStockCount} items running low
-                  </p>
-                  <p className="text-sm text-amber-800 mt-1">
-                    {ingredients
-                      .filter((i) => i.isLowStock)
-                      .map((i) => i.name)
-                      .join(", ")}{" "}
-                    need reordering
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Tabs */}
-        <Tabs defaultValue="ingredients" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
-            <TabsTrigger value="expiry">Expiry Tracking</TabsTrigger>
-            <TabsTrigger value="waste">Waste Management</TabsTrigger>
-            <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
-          </TabsList>
-
-          {/* Ingredients Tab */}
-          <TabsContent value="ingredients" className="space-y-4">
-            <div className="flex justify-end">
-              <Dialog open={isAddingIngredient} onOpenChange={setIsAddingIngredient}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Ingredient
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Ingredient</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleAddIngredient} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="ing-name">Ingredient Name</Label>
-                      <Input
-                        id="ing-name"
-                        placeholder="e.g., Paneer"
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ing-unit">Unit of Measurement</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select unit" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                          <SelectItem value="liters">Liters</SelectItem>
-                          <SelectItem value="pieces">Pieces</SelectItem>
-                          <SelectItem value="dozen">Dozen</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ing-stock">Current Stock</Label>
-                      <Input
-                        id="ing-stock"
-                        type="number"
-                        step="0.1"
-                        placeholder="5.5"
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ing-reorder">Reorder Level</Label>
-                      <Input
-                        id="ing-reorder"
-                        type="number"
-                        step="0.1"
-                        placeholder="3"
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="ing-cost">Cost Per Unit (₹)</Label>
-                      <Input
-                        id="ing-cost"
-                        type="number"
-                        step="0.01"
-                        placeholder="280"
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsAddingIngredient(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="submit">Add Ingredient</Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Ingredients ({ingredients.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Name
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Unit
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Current Stock
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Reorder Level
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Cost/Unit
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Total Value
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Status
-                        </th>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-3 px-4 font-medium text-sm">Name</th>
+                      <th className="text-left py-3 px-4 font-medium text-sm">Stock</th>
+                      <th className="text-left py-3 px-4 font-medium text-sm">Unit</th>
+                      <th className="text-left py-3 px-4 font-medium text-sm">Reorder Level</th>
+                      <th className="text-left py-3 px-4 font-medium text-sm">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredIngredients.map((item) => (
+                      <tr key={item.id} className="border-b border-border">
+                        <td className="py-4 px-4 font-medium">{item.name}</td>
+                        <td className="py-4 px-4">{item.currentStock}</td>
+                        <td className="py-4 px-4">{item.unit}</td>
+                        <td className="py-4 px-4">{item.reorderLevel}</td>
+                        <td className="py-4 px-4">
+                          {item.currentStock <= item.reorderLevel ? (
+                            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">Low Stock</span>
+                          ) : (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Healthy</span>
+                          )}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {ingredients.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="border-b border-border hover:bg-secondary/30 transition-colors"
-                        >
-                          <td className="py-4 px-4 font-medium">{item.name}</td>
-                          <td className="py-4 px-4">{item.unit}</td>
-                          <td className="py-4 px-4">
-                            {item.currentStock} {item.unit}
-                          </td>
-                          <td className="py-4 px-4">
-                            {item.reorderLevel} {item.unit}
-                          </td>
-                          <td className="py-4 px-4">₹{item.costPerUnit}</td>
-                          <td className="py-4 px-4 font-semibold">
-                            ₹
-                            {Math.round(
-                              item.currentStock * item.costPerUnit
-                            ).toLocaleString()}
-                          </td>
-                          <td className="py-4 px-4">
-                            {item.isLowStock ? (
-                              <span className="px-3 py-1 rounded-full bg-red-100 text-red-800 text-xs font-medium">
-                                Low Stock
-                              </span>
-                            ) : (
-                              <span className="px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
-                                In Stock
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {/* Expiry Tracking Tab */}
-          <TabsContent value="expiry" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Expiry Tracking
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Ingredient
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Batch Number
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Current Stock
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Expiry Date
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Days Left
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ingredients
-                        .filter((item) => item.expiryDate)
-                        .map((item) => {
-                          const daysLeft = item.expiryDate
-                            ? Math.ceil(
-                                (new Date(item.expiryDate).getTime() -
-                                  new Date().getTime()) /
-                                  (1000 * 60 * 60 * 24)
-                              )
-                            : 0;
-                          let statusColor = "bg-green-100 text-green-800";
-                          let statusText = "Good";
-                          if (daysLeft <= 0) {
-                            statusColor = "bg-red-100 text-red-800";
-                            statusText = "Expired";
-                          } else if (daysLeft <= 7) {
-                            statusColor = "bg-amber-100 text-amber-800";
-                            statusText = "Expiring Soon";
-                          }
-                          return (
-                            <tr
-                              key={item.id}
-                              className="border-b border-border hover:bg-secondary/30 transition-colors"
-                            >
-                              <td className="py-4 px-4 font-medium">
-                                {item.name}
-                              </td>
-                              <td className="py-4 px-4">
-                                {item.batchNumber}
-                              </td>
-                              <td className="py-4 px-4">
-                                {item.currentStock} {item.unit}
-                              </td>
-                              <td className="py-4 px-4">
-                                {item.expiryDate}
-                              </td>
-                              <td className="py-4 px-4 font-semibold">
-                                {daysLeft > 0 ? `${daysLeft} days` : "Expired"}
-                              </td>
-                              <td className="py-4 px-4">
-                                <span
-                                  className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}
-                                >
-                                  {statusText}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Waste Management Tab */}
-          <TabsContent value="waste" className="space-y-4">
-            <div className="flex justify-end">
-              <Dialog open={isAddingWaste} onOpenChange={setIsAddingWaste}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Record Waste
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Record Waste</DialogTitle>
-                  </DialogHeader>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      setIsAddingWaste(false);
-                    }}
-                    className="space-y-6"
-                  >
-                    <div className="space-y-2">
-                      <Label htmlFor="waste-ingredient">Ingredient</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select ingredient" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ingredients.map((item) => (
-                            <SelectItem key={item.id} value={item.name}>
-                              {item.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="waste-quantity">Quantity Wasted</Label>
-                      <Input
-                        id="waste-quantity"
-                        type="number"
-                        step="0.1"
-                        placeholder="0.5"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="waste-reason">Reason</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select reason" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Expired">Expired</SelectItem>
-                          <SelectItem value="Damaged">Damaged</SelectItem>
-                          <SelectItem value="Spoiled">Spoiled</SelectItem>
-                          <SelectItem value="Returned">Returned</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsAddingWaste(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="submit">Record Waste</Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <Card>
-                <CardContent className="pt-6">
+        <TabsContent value="suppliers">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Vendor List</h3>
+            <Dialog open={isAddingSupplier} onOpenChange={setIsAddingSupplier}>
+              <DialogTrigger asChild>
+                <Button size="sm" onClick={() => resetSupplierForm()}>Add Supplier</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Supplier</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleAddSupplier} className="space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">
-                      Total Waste Records
-                    </p>
-                    <p className="text-3xl font-bold mt-1">
-                      {wasteRecords.length}
-                    </p>
+                    <Label htmlFor="sup-name">Company Name</Label>
+                    <Input
+                      id="sup-name"
+                      required
+                      value={supplierForm.name}
+                      onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                    />
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="pt-6">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Cost</p>
-                    <p className="text-3xl font-bold mt-1">
-                      ₹
-                      {wasteRecords
-                        .reduce((sum, record) => sum + record.cost, 0)
-                        .toLocaleString()}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="pt-6">
-                  <div>
-                    <p className="text-sm text-muted-foreground">This Month</p>
-                    <p className="text-3xl font-bold mt-1">
-                      ₹{Math.round(wasteRecords.reduce((sum, record) => sum + record.cost, 0) / wasteRecords.length).toLocaleString()}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Waste Records</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Ingredient
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Quantity
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Reason
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Date
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-sm">
-                          Cost Loss
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {wasteRecords.map((record) => (
-                        <tr
-                          key={record.id}
-                          className="border-b border-border hover:bg-secondary/30 transition-colors"
-                        >
-                          <td className="py-4 px-4 font-medium">
-                            {record.ingredientName}
-                          </td>
-                          <td className="py-4 px-4">
-                            {record.quantity} {record.unit}
-                          </td>
-                          <td className="py-4 px-4">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                record.reason === "Expired"
-                                  ? "bg-red-100 text-red-800"
-                                  : record.reason === "Spoiled"
-                                    ? "bg-orange-100 text-orange-800"
-                                    : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {record.reason}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4">{record.date}</td>
-                          <td className="py-4 px-4 font-semibold text-red-600">
-                            ₹{record.cost}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Suppliers Tab */}
-          <TabsContent value="suppliers" className="space-y-4">
-            <div className="flex justify-end">
-              <Dialog open={isAddingSupplier} onOpenChange={setIsAddingSupplier}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Supplier
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Supplier</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleAddIngredient} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="sup-name">Supplier Name</Label>
-                      <Input id="sup-name" placeholder="Fresh Foods Co" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sup-contact">Contact Number</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="sup-contact">Contact Person</Label>
                       <Input
                         id="sup-contact"
-                        placeholder="9876543210"
-                        type="tel"
+                        required
+                        value={supplierForm.contact}
+                        onChange={(e) => setSupplierForm({ ...supplierForm, contact: e.target.value })}
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div>
                       <Label htmlFor="sup-email">Email</Label>
                       <Input
                         id="sup-email"
-                        placeholder="sales@supplier.com"
                         type="email"
+                        required
+                        value={supplierForm.email}
+                        onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sup-address">Address</Label>
-                      <Input
-                        id="sup-address"
-                        placeholder="123 Market Street"
-                      />
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsAddingSupplier(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="submit">Add Supplier</Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {suppliers.map((supplier) => (
-                <Card key={supplier.id}>
-                  <CardContent className="pt-6">
-                    <p className="font-semibold text-lg">{supplier.name}</p>
-                    <div className="space-y-2 mt-4 text-sm">
-                      <p>
-                        <span className="text-muted-foreground">Phone:</span>{" "}
-                        {supplier.contact}
-                      </p>
-                      <p>
-                        <span className="text-muted-foreground">Email:</span>{" "}
-                        {supplier.email}
-                      </p>
-                      <p>
-                        <span className="text-muted-foreground">Address:</span>{" "}
-                        {supplier.address}
-                      </p>
-                    </div>
-                    <Button variant="outline" className="w-full mt-4">
-                      Create PO
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
+                  </div>
+                  <div>
+                    <Label htmlFor="sup-address">Address</Label>
+                    <Input
+                      id="sup-address"
+                      value={supplierForm.address}
+                      onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">Register Supplier</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {suppliers.map((sup) => (
+              <Card key={sup.id}>
+                <CardHeader>
+                  <CardTitle className="text-lg">{sup.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <p><strong>Contact:</strong> {sup.contact}</p>
+                  <p><strong>Email:</strong> {sup.email}</p>
+                  <p><strong>Address:</strong> {sup.address}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

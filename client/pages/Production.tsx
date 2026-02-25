@@ -17,109 +17,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
-import { Plus, Clock, TrendingUp, AlertCircle } from "lucide-react";
-
-interface PrepList {
-  id: number;
-  date: string;
-  shift: "morning" | "afternoon" | "evening";
-  items: PrepItem[];
-  status: "pending" | "in-progress" | "completed";
-}
-
-interface PrepItem {
-  itemId: number;
-  itemName: string;
-  category: string;
-  expectedOrders: number;
-  prepQuantity: number;
-  prepTime: number;
-  assignedTo?: string;
-  status: "pending" | "in-progress" | "completed";
-}
-
-const mockPrepLists: PrepList[] = [
-  {
-    id: 1,
-    date: "2024-01-26",
-    shift: "morning",
-    status: "in-progress",
-    items: [
-      {
-        itemId: 1,
-        itemName: "Butter Chicken",
-        category: "Main Course",
-        expectedOrders: 12,
-        prepQuantity: 15,
-        prepTime: 90,
-        assignedTo: "Arjun",
-        status: "in-progress",
-      },
-      {
-        itemId: 2,
-        itemName: "Paneer Tikka Masala",
-        category: "Main Course",
-        expectedOrders: 10,
-        prepQuantity: 12,
-        prepTime: 75,
-        assignedTo: "Vikram",
-        status: "completed",
-      },
-      {
-        itemId: 3,
-        itemName: "Garlic Naan",
-        category: "Breads",
-        expectedOrders: 30,
-        prepQuantity: 40,
-        prepTime: 120,
-        assignedTo: "Ravi",
-        status: "pending",
-      },
-    ],
-  },
-  {
-    id: 2,
-    date: "2024-01-26",
-    shift: "afternoon",
-    status: "pending",
-    items: [
-      {
-        itemId: 4,
-        itemName: "Biryani",
-        category: "Main Course",
-        expectedOrders: 8,
-        prepQuantity: 10,
-        prepTime: 180,
-        status: "pending",
-      },
-      {
-        itemId: 5,
-        itemName: "Gulab Jamun",
-        category: "Desserts",
-        expectedOrders: 15,
-        prepQuantity: 20,
-        prepTime: 45,
-        status: "pending",
-      },
-    ],
-  },
-];
-
-const forecastData = [
-  { day: "Mon", expected: 35, avg: 32 },
-  { day: "Tue", expected: 38, avg: 30 },
-  { day: "Wed", expected: 42, avg: 35 },
-  { day: "Thu", expected: 28, avg: 25 },
-  { day: "Fri", expected: 52, avg: 48 },
-  { day: "Sat", expected: 68, avg: 62 },
-  { day: "Sun", expected: 45, avg: 40 },
-];
+import { useState, useEffect } from "react";
+import { Plus, Clock, TrendingUp, AlertCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  getPrepLists,
+  createPrepList,
+  updatePrepItemStatus,
+  getForecast,
+  type PrepList,
+  type PrepItem
+} from "@/lib/production-api";
 
 export default function Production() {
-  const [prepLists, setPrepLists] = useState<PrepList[]>(mockPrepLists);
+  const [prepLists, setPrepLists] = useState<PrepList[]>([]);
+  const [forecast, setForecast] = useState<any[]>([]);
   const [selectedShift, setSelectedShift] = useState("all");
   const [isAddingPrepList, setIsAddingPrepList] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [listData, forecastData] = await Promise.all([
+        getPrepLists(),
+        getForecast()
+      ]);
+      setPrepLists(listData);
+      setForecast(forecastData);
+    } catch (error) {
+      toast.error("Failed to load production planning data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredPrepLists =
     selectedShift === "all"
@@ -143,179 +78,213 @@ export default function Production() {
     0
   );
 
-  const handleAddPrepList = (e: React.FormEvent) => {
+  const handleAddPrepList = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsAddingPrepList(false);
+    try {
+      // In a real app, we'd collect form data here
+      // For now, this is a placeholder for the API call
+      toast.info("Create Prep List functionality will be fully implemented with form fields");
+      setIsAddingPrepList(false);
+    } catch (error) {
+      toast.error("Failed to create prep list");
+    }
   };
+
+  const handleStatusUpdate = async (prepListId: number, itemId: number, newStatus: string) => {
+    try {
+      await updatePrepItemStatus(prepListId, itemId, newStatus);
+      toast.success("Status updated");
+      loadData();
+    } catch (error) {
+      toast.error("Failed to update status");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Production Planning
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Kitchen forecasting, prep lists, and production schedules
-            </p>
-          </div>
-          <Dialog open={isAddingPrepList} onOpenChange={setIsAddingPrepList}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Prep List
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Prep List</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddPrepList} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="prep-date">Date</Label>
-                  <Input
-                    id="prep-date"
-                    type="date"
-                    defaultValue={new Date().toISOString().split("T")[0]}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="prep-shift">Shift</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select shift" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="morning">Morning (6 AM - 12 PM)</SelectItem>
-                      <SelectItem value="afternoon">
-                        Afternoon (12 PM - 6 PM)
-                      </SelectItem>
-                      <SelectItem value="evening">
-                        Evening (6 PM - 12 AM)
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="prep-forecast">Expected Orders</Label>
-                  <Input
-                    id="prep-forecast"
-                    type="number"
-                    placeholder="50"
-                  />
-                </div>
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsAddingPrepList(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit">Create Prep List</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Production Planning
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Kitchen forecasting, prep lists, and production schedules
+          </p>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Prep Items</p>
-                  <p className="text-2xl font-bold mt-2">{totalPrepItems}</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {completedItems} completed
-                  </p>
-                </div>
-                <Clock className="h-6 w-6 text-primary" />
+        <Dialog open={isAddingPrepList} onOpenChange={setIsAddingPrepList}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Prep List
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Prep List</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleAddPrepList} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="prep-date">Date</Label>
+                <Input
+                  id="prep-date"
+                  type="date"
+                  defaultValue={new Date().toISOString().split("T")[0]}
+                />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">In Progress</p>
-                  <p className="text-2xl font-bold mt-2">{inProgressItems}</p>
-                  <p className="text-xs text-amber-600 mt-2">Being prepared</p>
-                </div>
-                <TrendingUp className="h-6 w-6 text-amber-600" />
+              <div className="space-y-2">
+                <Label htmlFor="prep-shift">Shift</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select shift" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="morning">Morning (6 AM - 12 PM)</SelectItem>
+                    <SelectItem value="afternoon">
+                      Afternoon (12 PM - 6 PM)
+                    </SelectItem>
+                    <SelectItem value="evening">
+                      Evening (6 PM - 12 AM)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Total Prep Time
-                  </p>
-                  <p className="text-2xl font-bold mt-2">
-                    {Math.round(totalPrepTime / 60)} hrs
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    All items
-                  </p>
-                </div>
-                <Clock className="h-6 w-6 text-blue-600" />
+              <div className="space-y-2">
+                <Label htmlFor="prep-forecast">Expected Orders</Label>
+                <Input
+                  id="prep-forecast"
+                  type="number"
+                  placeholder="50"
+                />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Completion Rate
-                  </p>
-                  <p className="text-2xl font-bold mt-2">
-                    {totalPrepItems > 0
-                      ? Math.round((completedItems / totalPrepItems) * 100)
-                      : 0}
-                    %
-                  </p>
-                  <p className="text-xs text-green-600 mt-2">On track</p>
-                </div>
-                <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAddingPrepList(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Create Prep List</Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="prep-lists" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="prep-lists">Prep Lists</TabsTrigger>
-            <TabsTrigger value="forecast">Demand Forecast</TabsTrigger>
-            <TabsTrigger value="kitchen">Kitchen Station</TabsTrigger>
-          </TabsList>
-
-          {/* Prep Lists Tab */}
-          <TabsContent value="prep-lists" className="space-y-6">
-            <div className="flex gap-4 items-center">
-              <Label>Filter by Shift:</Label>
-              <Select value={selectedShift} onValueChange={setSelectedShift}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Shifts</SelectItem>
-                  <SelectItem value="morning">Morning</SelectItem>
-                  <SelectItem value="afternoon">Afternoon</SelectItem>
-                  <SelectItem value="evening">Evening</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Prep Items</p>
+                <p className="text-2xl font-bold mt-2">{totalPrepItems}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {completedItems} completed
+                </p>
+              </div>
+              <Clock className="h-6 w-6 text-primary" />
             </div>
+          </CardContent>
+        </Card>
 
-            {filteredPrepLists.map((prepList) => (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">In Progress</p>
+                <p className="text-2xl font-bold mt-2">{inProgressItems}</p>
+                <p className="text-xs text-amber-600 mt-2">Being prepared</p>
+              </div>
+              <TrendingUp className="h-6 w-6 text-amber-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Total Prep Time
+                </p>
+                <p className="text-2xl font-bold mt-2">
+                  {Math.round(totalPrepTime / 60)} hrs
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  All items
+                </p>
+              </div>
+              <Clock className="h-6 w-6 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Completion Rate
+                </p>
+                <p className="text-2xl font-bold mt-2">
+                  {totalPrepItems > 0
+                    ? Math.round((completedItems / totalPrepItems) * 100)
+                    : 0}
+                  %
+                </p>
+                <p className="text-xs text-green-600 mt-2">On track</p>
+              </div>
+              <TrendingUp className="h-6 w-6 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="prep-lists" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="prep-lists">Prep Lists</TabsTrigger>
+          <TabsTrigger value="forecast">Demand Forecast</TabsTrigger>
+          <TabsTrigger value="kitchen">Kitchen Station</TabsTrigger>
+        </TabsList>
+
+        {/* Prep Lists Tab */}
+        <TabsContent value="prep-lists" className="space-y-6">
+          <div className="flex gap-4 items-center">
+            <Label>Filter by Shift:</Label>
+            <Select value={selectedShift} onValueChange={setSelectedShift}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Shifts</SelectItem>
+                <SelectItem value="morning">Morning</SelectItem>
+                <SelectItem value="afternoon">Afternoon</SelectItem>
+                <SelectItem value="evening">Evening</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {filteredPrepLists.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No prep lists found for the selected shift.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredPrepLists.map((prepList) => (
               <Card key={prepList.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -328,13 +297,12 @@ export default function Production() {
                       </p>
                     </div>
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        prepList.status === "completed"
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${prepList.status === "completed"
                           ? "bg-green-100 text-green-800"
                           : prepList.status === "in-progress"
                             ? "bg-amber-100 text-amber-800"
                             : "bg-gray-100 text-gray-800"
-                      }`}
+                        }`}
                     >
                       {prepList.status === "completed"
                         ? "Completed"
@@ -375,7 +343,7 @@ export default function Production() {
                       <tbody>
                         {prepList.items.map((item) => (
                           <tr
-                            key={item.itemId}
+                            key={item.id}
                             className="border-b border-border hover:bg-secondary/30"
                           >
                             <td className="py-4 px-4 font-medium">
@@ -389,19 +357,19 @@ export default function Production() {
                               {item.assignedTo || "—"}
                             </td>
                             <td className="py-4 px-4">
-                              {item.status === "completed" ? (
-                                <span className="px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
-                                  Done
-                                </span>
-                              ) : item.status === "in-progress" ? (
-                                <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-medium">
-                                  In Progress
-                                </span>
-                              ) : (
-                                <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-medium">
-                                  Pending
-                                </span>
-                              )}
+                              <Select
+                                value={item.status}
+                                onValueChange={(val) => handleStatusUpdate(prepList.id, item.id, val)}
+                              >
+                                <SelectTrigger className="w-[130px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="in-progress">In Progress</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </td>
                           </tr>
                         ))}
@@ -410,97 +378,117 @@ export default function Production() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </TabsContent>
+            ))
+          )}
+        </TabsContent>
 
-          {/* Forecast Tab */}
-          <TabsContent value="forecast">
-            <Card>
-              <CardHeader>
-                <CardTitle>7-Day Demand Forecast</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {forecastData.map((data) => (
-                    <div key={data.day} className="flex items-center justify-between py-3 border-b border-border last:border-b-0">
-                      <div className="w-16 font-medium">{data.day}</div>
-                      <div className="flex-1 max-w-sm">
-                        <div className="flex gap-2 items-center">
-                          <div className="flex-1">
-                            <div className="h-8 bg-secondary rounded overflow-hidden">
-                              <div
-                                className="h-full bg-primary"
-                                style={{ width: `${(data.expected / 70) * 100}%` }}
-                              />
-                            </div>
+        {/* Forecast Tab */}
+        <TabsContent value="forecast">
+          <Card>
+            <CardHeader>
+              <CardTitle>7-Day Demand Forecast</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {forecast.map((data) => (
+                  <div key={data.day} className="flex items-center justify-between py-3 border-b border-border last:border-b-0">
+                    <div className="w-16 font-medium">{data.day}</div>
+                    <div className="flex-1 max-w-sm">
+                      <div className="flex gap-2 items-center">
+                        <div className="flex-1">
+                          <div className="h-8 bg-secondary rounded overflow-hidden">
+                            <div
+                              className="h-full bg-primary"
+                              style={{ width: `${(data.expected / 100) * 100}%` }}
+                            />
                           </div>
-                          <div className="text-right min-w-24">
-                            <p className="font-semibold">{data.expected} orders</p>
-                            <p className="text-xs text-muted-foreground">
-                              vs {data.avg} avg
-                            </p>
-                          </div>
+                        </div>
+                        <div className="text-right min-w-24">
+                          <p className="font-semibold">{data.expected} orders</p>
+                          <p className="text-xs text-muted-foreground">
+                            vs {data.avg} avg
+                          </p>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {/* Kitchen Station Tab */}
-          <TabsContent value="kitchen">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Kitchen Station Tab */}
+        <TabsContent value="kitchen">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {prepLists.some(p => p.items.some(i => i.category === "Main Course")) && (
               <Card>
                 <CardHeader>
                   <CardTitle>Main Course Station</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div className="p-3 border-l-4 border-amber-500 bg-amber-50 rounded">
-                      <p className="font-medium">Butter Chicken</p>
-                      <p className="text-sm text-muted-foreground">
-                        Prep Time: 90 min | Qty: 15
-                      </p>
-                      <p className="text-xs font-semibold text-amber-700 mt-1">
-                        In Progress - 45 min remaining
-                      </p>
-                    </div>
-                    <div className="p-3 border-l-4 border-green-500 bg-green-50 rounded">
-                      <p className="font-medium">Paneer Tikka Masala</p>
-                      <p className="text-sm text-muted-foreground">
-                        Prep Time: 75 min | Qty: 12
-                      </p>
-                      <p className="text-xs font-semibold text-green-700 mt-1">
-                        ✓ Completed
-                      </p>
-                    </div>
+                    {prepLists.flatMap(p => p.items)
+                      .filter(i => i.category === "Main Course")
+                      .map(item => (
+                        <div key={item.id} className={`p-3 border-l-4 rounded ${item.status === 'completed' ? 'border-green-500 bg-green-50' :
+                            item.status === 'in-progress' ? 'border-amber-500 bg-amber-50' :
+                              'border-gray-400 bg-gray-50'
+                          }`}>
+                          <p className="font-medium">{item.itemName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Prep Time: {item.prepTime} min | Qty: {item.prepQuantity}
+                          </p>
+                          <p className={`text-xs font-semibold mt-1 ${item.status === 'completed' ? 'text-green-700' :
+                              item.status === 'in-progress' ? 'text-amber-700' :
+                                'text-gray-700'
+                            }`}>
+                            {item.status === 'completed' ? '✓ Completed' :
+                              item.status === 'in-progress' ? 'In Progress' :
+                                'Pending'}
+                          </p>
+                        </div>
+                      ))}
                   </div>
                 </CardContent>
               </Card>
+            )}
 
+            {prepLists.some(p => p.items.some(i => i.category === "Breads")) && (
               <Card>
                 <CardHeader>
                   <CardTitle>Breads Station</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div className="p-3 border-l-4 border-gray-400 bg-gray-50 rounded">
-                      <p className="font-medium">Garlic Naan</p>
-                      <p className="text-sm text-muted-foreground">
-                        Prep Time: 120 min | Qty: 40
-                      </p>
-                      <p className="text-xs font-semibold text-gray-700 mt-1">
-                        Pending - Not started
-                      </p>
-                    </div>
+                    {prepLists.flatMap(p => p.items)
+                      .filter(i => i.category === "Breads")
+                      .map(item => (
+                        <div key={item.id} className={`p-3 border-l-4 rounded ${item.status === 'completed' ? 'border-green-500 bg-green-50' :
+                            item.status === 'in-progress' ? 'border-amber-500 bg-amber-50' :
+                              'border-gray-400 bg-gray-50'
+                          }`}>
+                          <p className="font-medium">{item.itemName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Prep Time: {item.prepTime} min | Qty: {item.prepQuantity}
+                          </p>
+                          <p className={`text-xs font-semibold mt-1 ${item.status === 'completed' ? 'text-green-700' :
+                              item.status === 'in-progress' ? 'text-amber-700' :
+                                'text-gray-700'
+                            }`}>
+                            {item.status === 'completed' ? '✓ Completed' :
+                              item.status === 'in-progress' ? 'In Progress' :
+                                'Pending'}
+                          </p>
+                        </div>
+                      ))}
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

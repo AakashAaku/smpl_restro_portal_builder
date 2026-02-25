@@ -16,60 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Search } from "lucide-react";
-
-interface MenuItem {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  prepTime: number;
-  status: "available" | "unavailable";
-}
-
-const mockMenuItems: MenuItem[] = [
-  {
-    id: 1,
-    name: "Butter Chicken",
-    category: "Main Course",
-    price: 320,
-    prepTime: 25,
-    status: "available",
-  },
-  {
-    id: 2,
-    name: "Paneer Tikka Masala",
-    category: "Main Course",
-    price: 280,
-    prepTime: 20,
-    status: "available",
-  },
-  {
-    id: 3,
-    name: "Garlic Naan",
-    category: "Breads",
-    price: 60,
-    prepTime: 8,
-    status: "available",
-  },
-  {
-    id: 4,
-    name: "Gulab Jamun",
-    category: "Desserts",
-    price: 120,
-    prepTime: 5,
-    status: "available",
-  },
-  {
-    id: 5,
-    name: "Biryani",
-    category: "Main Course",
-    price: 250,
-    prepTime: 30,
-    status: "unavailable",
-  },
-];
+import {
+  MenuItem,
+  getMenuItems,
+  createMenuItem,
+  updateMenuItem,
+  deleteMenuItem
+} from "@/lib/menu";
+import { toast } from "sonner";
 
 const categories = [
   "Main Course",
@@ -77,14 +33,42 @@ const categories = [
   "Breads",
   "Desserts",
   "Beverages",
+  "Sides",
 ];
 
 export default function MenuManagement() {
-  const [items, setItems] = useState<MenuItem[]>(mockMenuItems);
+  const [items, setItems] = useState<MenuItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Form state
+  const [formState, setFormState] = useState<Omit<MenuItem, "id">>({
+    name: "",
+    category: "Main Course",
+    price: 0,
+    prepTime: 0,
+    description: "",
+    status: "available",
+  });
+
+  useEffect(() => {
+    fetchItems();
+  }, []);
+
+  const fetchItems = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getMenuItems();
+      setItems(data);
+    } catch (error) {
+      toast.error("Failed to load menu items");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredItems = items.filter((item) => {
     const matchesSearch = item.name
@@ -95,52 +79,107 @@ export default function MenuManagement() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleDelete = (id: number) => {
-    setItems(items.filter((item) => item.id !== id));
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this item?")) return;
+    try {
+      await deleteMenuItem(id);
+      setItems(items.filter((item) => item.id !== id));
+      toast.success("Item deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete item");
+    }
   };
 
-  const handleAddItem = (e: React.FormEvent) => {
+  const handleEdit = (item: MenuItem) => {
+    setEditingId(item.id);
+    setFormState({
+      name: item.name,
+      category: item.category,
+      price: item.price,
+      prepTime: item.prepTime,
+      description: item.description,
+      status: item.status,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsDialogOpen(false);
+    try {
+      if (editingId) {
+        const updated = await updateMenuItem(editingId, formState);
+        setItems(items.map((i) => (i.id === editingId ? updated : i)));
+        toast.success("Item updated successfully");
+      } else {
+        const created = await createMenuItem(formState);
+        setItems([...items, created]);
+        toast.success("Item added successfully");
+      }
+      resetForm();
+      setIsDialogOpen(false);
+    } catch (error) {
+      toast.error(editingId ? "Failed to update item" : "Failed to add item");
+    }
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setFormState({
+      name: "",
+      category: "Main Course",
+      price: 0,
+      prepTime: 0,
+      description: "",
+      status: "available",
+    });
   };
 
   return (
     <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Menu Management
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Manage your restaurant menu items and categories
-            </p>
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Item
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingId ? "Edit Menu Item" : "Add New Menu Item"}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddItem} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Item Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g., Butter Chicken"
-                    className="col-span-3"
-                  />
-                </div>
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Menu Management
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your restaurant menu items and categories
+          </p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button className="gap-2" onClick={() => resetForm()}>
+              <Plus className="h-4 w-4" />
+              Add Item
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {editingId ? "Edit Menu Item" : "Add New Menu Item"}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Item Name</Label>
+                <Input
+                  id="name"
+                  required
+                  value={formState.name}
+                  onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                  placeholder="e.g., Butter Chicken"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
-                  <Select>
+                  <Select
+                    value={formState.category}
+                    onValueChange={(val) => setFormState({ ...formState, category: val })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -154,92 +193,119 @@ export default function MenuManagement() {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formState.status}
+                    onValueChange={(val: any) => setFormState({ ...formState, status: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="unavailable">Unavailable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="price">Price (₹)</Label>
                   <Input
                     id="price"
                     type="number"
+                    required
+                    value={formState.price}
+                    onChange={(e) => setFormState({ ...formState, price: parseFloat(e.target.value) })}
                     placeholder="250"
-                    className="col-span-3"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="preptime">Preparation Time (minutes)</Label>
+                  <Label htmlFor="preptime">Prep Time (min)</Label>
                   <Input
                     id="preptime"
                     type="number"
+                    required
+                    value={formState.prepTime}
+                    onChange={(e) => setFormState({ ...formState, prepTime: parseInt(e.target.value) })}
                     placeholder="20"
-                    className="col-span-3"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <textarea
-                    id="description"
-                    placeholder="Item description"
-                    className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    rows={3}
-                  />
-                </div>
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    {editingId ? "Update Item" : "Add Item"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (Optional)</Label>
+                <textarea
+                  id="description"
+                  placeholder="Item description"
+                  value={formState.description}
+                  onChange={(e) => setFormState({ ...formState, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editingId ? "Update Item" : "Add Item"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-        {/* Filters */}
-        <div className="flex gap-4 items-end">
-          <div className="flex-1 max-w-sm">
-            <Label htmlFor="search" className="mb-2 block">
-              Search Items
-            </Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="search"
-                placeholder="Search by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          <div className="w-48">
-            <Label htmlFor="category-filter" className="mb-2 block">
-              Filter by Category
-            </Label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Filters */}
+      <div className="flex gap-4 items-end flex-wrap">
+        <div className="flex-1 max-w-sm">
+          <Label htmlFor="search" className="mb-2 block">
+            Search Items
+          </Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="search"
+              placeholder="Search by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
+        <div className="w-48">
+          <Label htmlFor="category-filter" className="mb-2 block">
+            Filter by Category
+          </Label>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-        {/* Items Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Menu Items ({filteredItems.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Items Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Menu Items ({filteredItems.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center p-8">Loading menu items...</div>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -276,11 +342,10 @@ export default function MenuManagement() {
                       <td className="py-4 px-4">{item.prepTime} min</td>
                       <td className="py-4 px-4">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            item.status === "available"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${item.status === "available"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                            }`}
                         >
                           {item.status === "available"
                             ? "Available"
@@ -292,7 +357,7 @@ export default function MenuManagement() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setEditingId(item.id)}
+                            onClick={() => handleEdit(item)}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -311,8 +376,9 @@ export default function MenuManagement() {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

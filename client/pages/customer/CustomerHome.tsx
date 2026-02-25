@@ -20,6 +20,9 @@ import {
   Minus,
 } from "lucide-react";
 import { logout } from "@/lib/auth";
+import { getMenuItems, MenuItem as ApiMenuItem } from "@/lib/menu";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 interface MenuItem {
   id: number;
@@ -37,108 +40,7 @@ interface CartItem extends MenuItem {
   quantity: number;
 }
 
-const mockMenuItems: MenuItem[] = [
-  {
-    id: 1,
-    name: "Butter Chicken",
-    price: 320,
-    category: "Main Course",
-    description: "Tender chicken in creamy tomato sauce with aromatic spices",
-    rating: 4.8,
-    prepTime: 25,
-    veg: false,
-  },
-  {
-    id: 2,
-    name: "Paneer Tikka Masala",
-    price: 280,
-    category: "Main Course",
-    description: "Grilled paneer in spiced tomato cream sauce",
-    rating: 4.7,
-    prepTime: 20,
-    veg: true,
-  },
-  {
-    id: 3,
-    name: "Garlic Naan",
-    price: 60,
-    category: "Breads",
-    description: "Soft naan with garlic and butter",
-    rating: 4.9,
-    prepTime: 8,
-    veg: true,
-  },
-  {
-    id: 4,
-    name: "Biryani",
-    price: 250,
-    category: "Main Course",
-    description: "Fragrant rice with meat and aromatic spices",
-    rating: 4.6,
-    prepTime: 30,
-    veg: false,
-  },
-  {
-    id: 5,
-    name: "Gulab Jamun",
-    price: 120,
-    category: "Desserts",
-    description: "Sweet milk solids in sugar syrup - homemade specialty",
-    rating: 4.8,
-    prepTime: 5,
-    veg: true,
-  },
-  {
-    id: 6,
-    name: "Mango Lassi",
-    price: 80,
-    category: "Beverages",
-    description: "Refreshing mango yogurt drink with cardamom",
-    rating: 4.7,
-    prepTime: 3,
-    veg: true,
-  },
-  {
-    id: 7,
-    name: "Dal Makhani",
-    price: 200,
-    category: "Main Course",
-    description: "Slow-cooked lentils in creamy sauce",
-    rating: 4.9,
-    prepTime: 20,
-    veg: true,
-  },
-  {
-    id: 8,
-    name: "Tandoori Chicken",
-    price: 350,
-    category: "Main Course",
-    description: "Grilled chicken marinated in yogurt and spices",
-    rating: 4.8,
-    prepTime: 30,
-    veg: false,
-  },
-  {
-    id: 9,
-    name: "Samosa",
-    price: 40,
-    category: "Appetizers",
-    description: "Crispy pastry filled with spiced potatoes and peas",
-    rating: 4.5,
-    prepTime: 10,
-    veg: true,
-  },
-  {
-    id: 10,
-    name: "Rasgulla",
-    price: 100,
-    category: "Desserts",
-    description: "Soft cheese balls in sugar syrup",
-    rating: 4.7,
-    prepTime: 5,
-    veg: true,
-  },
-];
+const mockMenuItems: MenuItem[] = []; // Will be replaced by API data
 
 export default function CustomerHome() {
   const navigate = useNavigate();
@@ -147,13 +49,39 @@ export default function CustomerHome() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [showCart, setShowCart] = useState(false);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMenu();
+  }, []);
+
+  const fetchMenu = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getMenuItems();
+      // Map API MenuItem to Customer MenuItem format
+      const mappedData: MenuItem[] = data.map(item => ({
+        ...item,
+        rating: 4.5 + Math.random() * 0.5, // Mock rating since API doesn't have it
+        veg: !["Chicken", "Mutton", "Fish", "Meat", "Egg"].some(nonVeg =>
+          item.name.includes(nonVeg) || item.description.includes(nonVeg)
+        )
+      }));
+      setMenuItems(mappedData);
+    } catch (error) {
+      toast.error("Failed to load menu");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const categories = [
     "All",
-    ...new Set(mockMenuItems.map((item) => item.category)),
+    ...new Set(menuItems.map((item) => item.category)),
   ];
 
-  const filteredItems = mockMenuItems.filter((item) => {
+  const filteredItems = menuItems.filter((item) => {
     const matchesSearch = item.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
@@ -213,8 +141,10 @@ export default function CustomerHome() {
           {/* Top Row */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">🍽️</span>
-              <h1 className="text-xl font-bold">Restaurant Order</h1>
+              <div className="bg-primary text-primary-foreground p-1.5 rounded-lg shadow-sm">
+                <span className="text-xl leading-none">🍽️</span>
+              </div>
+              <h1 className="text-xl font-bold tracking-tight">VenzoSmart</h1>
             </div>
 
             <div className="flex items-center gap-2">
@@ -279,7 +209,7 @@ export default function CustomerHome() {
         <Card className="mb-8 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20">
           <CardContent className="pt-6 flex items-start gap-4">
             <div>
-              <h2 className="font-semibold text-lg mb-2">Welcome to Restaurant</h2>
+              <h2 className="font-semibold text-lg mb-2">Welcome to VenzoSmart</h2>
               <div className="space-y-1 text-sm">
                 <p className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
@@ -315,11 +245,10 @@ export default function CustomerHome() {
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        selectedCategory === cat
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-secondary"
-                      }`}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${selectedCategory === cat
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-secondary"
+                        }`}
                     >
                       {cat}
                     </button>

@@ -47,7 +47,7 @@ export const getMenuItems: RequestHandler = (_req, res) => {
 
 export const getMenuItemById: RequestHandler = (req, res) => {
   const { id } = req.params;
-  const item = menuItems.find((item) => item.id === parseInt(id));
+  const item = menuItems.find((item) => item.id === parseInt(id as string));
 
   if (!item) {
     res.status(404).json({ error: "Menu item not found" });
@@ -67,7 +67,7 @@ export const createMenuItem: RequestHandler = (req, res) => {
   }
 
   const newItem: MenuItem = {
-    id: Math.max(...menuItems.map((i) => i.id)) + 1,
+    id: Math.max(...menuItems.map((i) => i.id), 0) + 1,
     name,
     category,
     price: parseFloat(price),
@@ -84,7 +84,7 @@ export const updateMenuItem: RequestHandler = (req, res) => {
   const { id } = req.params;
   const { name, category, price, prepTime, description, status } = req.body;
 
-  const itemIndex = menuItems.findIndex((item) => item.id === parseInt(id));
+  const itemIndex = menuItems.findIndex((item) => item.id === parseInt(id as string));
 
   if (itemIndex === -1) {
     res.status(404).json({ error: "Menu item not found" });
@@ -108,7 +108,7 @@ export const updateMenuItem: RequestHandler = (req, res) => {
 export const deleteMenuItem: RequestHandler = (req, res) => {
   const { id } = req.params;
 
-  const itemIndex = menuItems.findIndex((item) => item.id === parseInt(id));
+  const itemIndex = menuItems.findIndex((item) => item.id === parseInt(id as string));
 
   if (itemIndex === -1) {
     res.status(404).json({ error: "Menu item not found" });

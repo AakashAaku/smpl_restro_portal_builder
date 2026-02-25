@@ -101,7 +101,7 @@ export const getIngredients: RequestHandler = (_req, res) => {
 
 export const getIngredientById: RequestHandler = (req, res) => {
   const { id } = req.params;
-  const ingredient = ingredients.find((i) => i.id === parseInt(id));
+  const ingredient = ingredients.find((i) => i.id === parseInt(id as string));
 
   if (!ingredient) {
     res.status(404).json({ error: "Ingredient not found" });
@@ -140,7 +140,7 @@ export const updateIngredient: RequestHandler = (req, res) => {
   const { name, unit, currentStock, reorderLevel, costPerUnit, supplierId } =
     req.body;
 
-  const ingredient = ingredients.find((i) => i.id === parseInt(id));
+  const ingredient = ingredients.find((i) => i.id === parseInt(id as string));
 
   if (!ingredient) {
     res.status(404).json({ error: "Ingredient not found" });
@@ -159,7 +159,7 @@ export const updateIngredient: RequestHandler = (req, res) => {
 
 export const deleteIngredient: RequestHandler = (req, res) => {
   const { id } = req.params;
-  const index = ingredients.findIndex((i) => i.id === parseInt(id));
+  const index = ingredients.findIndex((i) => i.id === parseInt(id as string));
 
   if (index === -1) {
     res.status(404).json({ error: "Ingredient not found" });

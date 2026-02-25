@@ -61,6 +61,18 @@ import {
   getStaffStats,
   updatePerformance,
 } from "./routes/staff";
+import {
+  getPurchases,
+  recordPurchase,
+  getPurchaseStats,
+  getPurchasesByIngredient,
+} from "./routes/purchases";
+import {
+  getFinishedGoods,
+  createFinishedGood,
+  updateFinishedGood,
+  produceFinishedGood,
+} from "./routes/finished-goods";
 
 export function createServer() {
   const app = express();
@@ -136,6 +148,18 @@ export function createServer() {
   app.put("/api/staff/:id", updateStaffMember);
   app.delete("/api/staff/:id", deleteStaffMember);
   app.put("/api/staff/:id/performance", updatePerformance);
+
+  // Purchase Management Routes
+  app.get("/api/purchases", getPurchases);
+  app.get("/api/purchases/stats", getPurchaseStats);
+  app.get("/api/purchases/ingredient/:ingredientId", getPurchasesByIngredient);
+  app.post("/api/purchases", recordPurchase);
+
+  // Finished Goods & Production Routes
+  app.get("/api/finished-goods", getFinishedGoods);
+  app.post("/api/finished-goods", createFinishedGood);
+  app.put("/api/finished-goods/:id", updateFinishedGood);
+  app.post("/api/finished-goods/:id/produce", produceFinishedGood);
 
   return app;
 }

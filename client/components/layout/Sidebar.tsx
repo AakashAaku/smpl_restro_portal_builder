@@ -78,12 +78,12 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       {/* Logo */}
       <div className="border-b border-sidebar-border px-6 py-8">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg shadow-sm">
             🍽️
           </div>
           <div>
-            <h1 className="font-bold text-sidebar-foreground text-lg">
-              Restaurant
+            <h1 className="font-bold text-sidebar-foreground text-lg tracking-tight">
+              VenzoSmart
             </h1>
             <p className="text-xs text-sidebar-foreground/60">Admin Portal</p>
           </div>

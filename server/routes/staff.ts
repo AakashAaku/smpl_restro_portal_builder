@@ -82,7 +82,7 @@ export const getStaff: RequestHandler = (_req, res) => {
 
 export const getStaffById: RequestHandler = (req, res) => {
   const { id } = req.params;
-  const member = staff.find((s) => s.id === parseInt(id));
+  const member = staff.find((s) => s.id === parseInt(id as string));
 
   if (!member) {
     res.status(404).json({ error: "Staff member not found" });
@@ -120,8 +120,7 @@ export const createStaffMember: RequestHandler = (req, res) => {
 export const updateStaffMember: RequestHandler = (req, res) => {
   const { id } = req.params;
   const { name, email, phone, role, status, salary, department } = req.body;
-
-  const member = staff.find((s) => s.id === parseInt(id));
+  const member = staff.find((s) => s.id === parseInt(id as string));
 
   if (!member) {
     res.status(404).json({ error: "Staff member not found" });
@@ -141,7 +140,7 @@ export const updateStaffMember: RequestHandler = (req, res) => {
 
 export const deleteStaffMember: RequestHandler = (req, res) => {
   const { id } = req.params;
-  const index = staff.findIndex((s) => s.id === parseInt(id));
+  const index = staff.findIndex((s) => s.id === parseInt(id as string));
 
   if (index === -1) {
     res.status(404).json({ error: "Staff member not found" });
@@ -189,7 +188,7 @@ export const getStaffStats: RequestHandler = (_req, res) => {
     inactiveStaff,
     onLeaveStaff,
     roleCounts,
-    totalMonthlySalaries: totalSalaries,
+    monthlyPayroll: totalSalaries,
     averagePerformance,
   });
 };
@@ -203,7 +202,7 @@ export const updatePerformance: RequestHandler = (req, res) => {
     return;
   }
 
-  const member = staff.find((s) => s.id === parseInt(id));
+  const member = staff.find((s) => s.id === parseInt(id as string));
 
   if (!member) {
     res.status(404).json({ error: "Staff member not found" });
