@@ -1,214 +1,154 @@
-import { RequestHandler } from "express";
+import { Router } from "express";
+import prisma from "../lib/prisma";
 
-export interface StaffMember {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  role: "admin" | "manager" | "chef" | "waiter" | "delivery";
-  status: "active" | "inactive" | "on-leave";
-  joinDate: string;
-  salary?: number;
-  department?: string;
-  performance?: number;
-}
+const router = Router();
 
-let staff: StaffMember[] = [
-  {
-    id: 1,
-    name: "Ramesh Kumar",
-    email: "ramesh@restaurant.com",
-    phone: "9876543210",
-    role: "admin",
-    status: "active",
-    joinDate: "2022-03-15",
-    salary: 75000,
-    department: "Management",
-    performance: 95,
-  },
-  {
-    id: 2,
-    name: "Vikram Singh",
-    email: "vikram@restaurant.com",
-    phone: "9876543211",
-    role: "manager",
-    status: "active",
-    joinDate: "2022-08-20",
-    salary: 55000,
-    department: "Operations",
-    performance: 88,
-  },
-  {
-    id: 3,
-    name: "Arjun Verma",
-    email: "arjun@restaurant.com",
-    phone: "9876543212",
-    role: "chef",
-    status: "active",
-    joinDate: "2021-12-10",
-    salary: 45000,
-    department: "Kitchen",
-    performance: 92,
-  },
-  {
-    id: 4,
-    name: "Pooja Sharma",
-    email: "pooja@restaurant.com",
-    phone: "9876543213",
-    role: "waiter",
-    status: "active",
-    joinDate: "2023-06-05",
-    salary: 25000,
-    department: "Front Desk",
-    performance: 85,
-  },
-  {
-    id: 5,
-    name: "Ravi Gupta",
-    email: "ravi@restaurant.com",
-    phone: "9876543214",
-    role: "delivery",
-    status: "on-leave",
-    joinDate: "2023-04-15",
-    salary: 22000,
-    department: "Delivery",
-    performance: 78,
-  },
-];
-
-export const getStaff: RequestHandler = (_req, res) => {
-  res.json(staff);
-};
-
-export const getStaffById: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const member = staff.find((s) => s.id === parseInt(id as string));
-
-  if (!member) {
-    res.status(404).json({ error: "Staff member not found" });
-    return;
+// Get all staff
+router.get("/", async (_req, res) => {
+  try {
+    const staff = await prisma.staff.findMany({
+      orderBy: { name: "asc" },
+    });
+    res.json(staff);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch staff" });
   }
+});
 
-  res.json(member);
-};
+// Get staff stats
+router.get("/stats", async (_req, res) => {
+  try {
+    const totalStaff = await prisma.staff.count();
+    const roleStats = await prisma.staff.groupBy({
+      by: ["role"],
+      _count: { _all: true },
+    });
 
-export const createStaffMember: RequestHandler = (req, res) => {
-  const { name, email, phone, role, department, salary } = req.body;
+    const roleCounts: Record<string, number> = {};
+    roleStats.forEach((stat) => {
+      roleCounts[stat.role.toLowerCase()] = stat._count._all;
+    });
 
-  if (!name || !email || !phone || !role) {
-    res.status(400).json({ error: "Missing required fields" });
-    return;
+    const averagePerformance = await prisma.staff.aggregate({
+      _avg: { performanceRating: true },
+    });
+
+    res.json({
+      totalStaff,
+      activeStaff: totalStaff,
+      roleCounts,
+      averagePerformance: Math.round(averagePerformance._avg.performanceRating || 0),
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch staff stats" });
   }
+});
 
-  const newMember: StaffMember = {
-    id: Math.max(...staff.map((s) => s.id), 0) + 1,
-    name,
-    email,
-    phone,
-    role,
-    status: "active",
-    joinDate: new Date().toISOString().split("T")[0],
-    salary: salary ? parseFloat(salary) : undefined,
-    department: department || undefined,
-    performance: 80,
-  };
-
-  staff.push(newMember);
-  res.status(201).json(newMember);
-};
-
-export const updateStaffMember: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const { name, email, phone, role, status, salary, department } = req.body;
-  const member = staff.find((s) => s.id === parseInt(id as string));
-
-  if (!member) {
-    res.status(404).json({ error: "Staff member not found" });
-    return;
+// Get staff by role
+router.get("/role/:role", async (req, res) => {
+  try {
+    const { role } = req.params;
+    const staff = await prisma.staff.findMany({
+      where: { role: role as string },
+    });
+    res.json(staff);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch staff by role" });
   }
+});
 
-  if (name) member.name = name;
-  if (email) member.email = email;
-  if (phone) member.phone = phone;
-  if (role) member.role = role;
-  if (status) member.status = status;
-  if (salary) member.salary = parseFloat(salary);
-  if (department) member.department = department;
+// Get staff by ID
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const member = await prisma.staff.findUnique({
+      where: { id: parseInt(id as string) },
+    });
 
-  res.json(member);
-};
+    if (!member) {
+      res.status(404).json({ error: "Staff member not found" });
+      return;
+    }
 
-export const deleteStaffMember: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const index = staff.findIndex((s) => s.id === parseInt(id as string));
-
-  if (index === -1) {
-    res.status(404).json({ error: "Staff member not found" });
-    return;
+    res.json(member);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch staff member" });
   }
+});
 
-  const deleted = staff.splice(index, 1);
-  res.json(deleted[0]);
-};
+// Create staff member
+router.post("/", async (req, res) => {
+  try {
+    const { name, email, phone, role } = req.body;
 
-export const getStaffByRole: RequestHandler = (req, res) => {
-  const { role } = req.query;
+    if (!name || !email || !phone || !role) {
+      res.status(400).json({ error: "Missing required fields" });
+      return;
+    }
 
-  if (!role) {
-    res.status(400).json({ error: "Role parameter required" });
-    return;
+    const newMember = await prisma.staff.create({
+      data: { name, email, phone, role },
+    });
+
+    res.status(201).json(newMember);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create staff member" });
   }
+});
 
-  const filtered = staff.filter((s) => s.role === role);
-  res.json(filtered);
-};
+// Update staff member
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, phone, role } = req.body;
 
-export const getStaffStats: RequestHandler = (_req, res) => {
-  const totalStaff = staff.length;
-  const activeStaff = staff.filter((s) => s.status === "active").length;
-  const inactiveStaff = staff.filter((s) => s.status === "inactive").length;
-  const onLeaveStaff = staff.filter((s) => s.status === "on-leave").length;
+    const updatedMember = await prisma.staff.update({
+      where: { id: parseInt(id as string) },
+      data: { name, email, phone, role },
+    });
 
-  const roleCounts = {
-    admin: staff.filter((s) => s.role === "admin").length,
-    manager: staff.filter((s) => s.role === "manager").length,
-    chef: staff.filter((s) => s.role === "chef").length,
-    waiter: staff.filter((s) => s.role === "waiter").length,
-    delivery: staff.filter((s) => s.role === "delivery").length,
-  };
-
-  const totalSalaries = staff.reduce((sum, s) => sum + (s.salary || 0), 0);
-  const averagePerformance = Math.round(
-    staff.reduce((sum, s) => sum + (s.performance || 0), 0) / staff.length
-  );
-
-  res.json({
-    totalStaff,
-    activeStaff,
-    inactiveStaff,
-    onLeaveStaff,
-    roleCounts,
-    monthlyPayroll: totalSalaries,
-    averagePerformance,
-  });
-};
-
-export const updatePerformance: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const { rating } = req.body;
-
-  if (rating === undefined || rating < 0 || rating > 100) {
-    res.status(400).json({ error: "Rating must be between 0 and 100" });
-    return;
+    res.json(updatedMember);
+  } catch (error) {
+    if ((error as any).code === "P2025") {
+      res.status(404).json({ error: "Staff member not found" });
+    } else {
+      res.status(500).json({ error: "Failed to update staff member" });
+    }
   }
+});
 
-  const member = staff.find((s) => s.id === parseInt(id as string));
-
-  if (!member) {
-    res.status(404).json({ error: "Staff member not found" });
-    return;
+// Delete staff member
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.staff.delete({
+      where: { id: parseInt(id as string) },
+    });
+    res.json({ message: "Staff member deleted" });
+  } catch (error) {
+    if ((error as any).code === "P2025") {
+      res.status(404).json({ error: "Staff member not found" });
+    } else {
+      res.status(500).json({ error: "Failed to delete staff member" });
+    }
   }
+});
 
-  member.performance = parseInt(rating);
-  res.json(member);
-};
+// Update performance
+router.put("/:id/performance", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating } = req.body;
+
+    const updatedMember = await prisma.staff.update({
+      where: { id: parseInt(id as string) },
+      data: { performanceRating: parseFloat(rating) },
+    });
+
+    res.json(updatedMember);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update performance" });
+  }
+});
+
+export default router;

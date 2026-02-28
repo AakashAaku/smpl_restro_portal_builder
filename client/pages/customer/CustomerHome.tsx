@@ -10,14 +10,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Plus,
+  Minus,
+  Leaf,
   Search,
   LogOut,
   ShoppingCart,
   MapPin,
   Clock,
   Star,
-  Plus,
-  Minus,
+  Sparkles,
+  UtensilsCrossed,
+  Heart,
+  ChevronRight,
+  User,
+  PartyPopper,
+  History
 } from "lucide-react";
 import { logout } from "@/lib/auth";
 import { getMenuItems, MenuItem as ApiMenuItem } from "@/lib/menu";
@@ -63,10 +71,8 @@ export default function CustomerHome() {
       // Map API MenuItem to Customer MenuItem format
       const mappedData: MenuItem[] = data.map(item => ({
         ...item,
-        rating: 4.5 + Math.random() * 0.5, // Mock rating since API doesn't have it
-        veg: !["Chicken", "Mutton", "Fish", "Meat", "Egg"].some(nonVeg =>
-          item.name.includes(nonVeg) || item.description.includes(nonVeg)
-        )
+        rating: 4.8 + Math.random() * 0.2, // Premium ratings
+        veg: true // 110% Pure Veg & Eggless
       }));
       setMenuItems(mappedData);
     } catch (error) {
@@ -140,11 +146,19 @@ export default function CustomerHome() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           {/* Top Row */}
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="bg-primary text-primary-foreground p-1.5 rounded-lg shadow-sm">
-                <span className="text-xl leading-none">🍽️</span>
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-emerald-600 to-green-500 text-white p-2.5 rounded-xl shadow-lg organic-glow scale-110">
+                <Leaf className="h-6 w-6" />
               </div>
-              <h1 className="text-xl font-bold tracking-tight">VenzoSmart</h1>
+              <div>
+                <h1 className="text-2xl font-black tracking-tighter text-emerald-950 flex items-center gap-1">
+                  VENZO<span className="text-primary italic">SMART</span>
+                  <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" />
+                </h1>
+                <p className="text-[9px] text-primary font-black uppercase tracking-[0.3em] -mt-1 bg-primary/5 px-2 py-0.5 rounded-full inline-block">
+                  110% Pure Veg & Eggless
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -175,54 +189,81 @@ export default function CustomerHome() {
           </div>
 
           {/* Navigation */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
             <Button
               variant="default"
               size="sm"
               onClick={() => navigate("/customer/home")}
-              className="gap-2"
+              className="gap-2 rounded-full px-6 h-10 font-black shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all hover:scale-105 whitespace-nowrap"
             >
-              🍽️ Menu
+              <UtensilsCrossed className="h-4 w-4" />
+              CURATED MENU
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate("/customer/orders")}
-              className="gap-2"
+              className="gap-2 rounded-full px-6 h-10 font-bold border-emerald-100 bg-white hover:bg-emerald-50 whitespace-nowrap"
             >
-              📦 My Orders
+              <History className="h-4 w-4 text-primary" />
+              PREVIOUS ORDERS
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate("/customer/events")}
-              className="gap-2"
+              className="gap-2 rounded-full px-6 h-10 font-bold border-emerald-100 bg-white hover:bg-emerald-50 whitespace-nowrap"
             >
-              🎉 Book Event
+              <PartyPopper className="h-4 w-4 text-primary" />
+              GALA BOOKING
             </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Info Card */}
-        <Card className="mb-8 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20">
-          <CardContent className="pt-6 flex items-start gap-4">
-            <div>
-              <h2 className="font-semibold text-lg mb-2">Welcome to VenzoSmart</h2>
-              <div className="space-y-1 text-sm">
-                <p className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  123 Food Street, Mumbai
-                </p>
-                <p className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Delivery in 30-45 minutes
-                </p>
+        {/* Hero Section */}
+        <div className="relative mb-12 rounded-[2.5rem] overflow-hidden shadow-2xl organic-glow group h-[400px]">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/80 via-emerald-900/40 to-transparent z-10" />
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1543353071-10c8ba85a904?auto=format&fit=crop&q=80')] bg-cover bg-center group-hover:scale-110 transition-transform duration-[10s]" />
+          <div className="absolute inset-0 z-20 flex flex-col justify-center px-10 sm:px-20">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 backdrop-blur-xl border border-emerald-400/30 text-emerald-400 text-[10px] font-black uppercase tracking-[0.3em] mb-6 shadow-2xl">
+                <Sparkles className="h-3 w-3" />
+                Verified Pure Veg & Eggless
+              </div>
+              <h2 className="text-5xl sm:text-7xl font-black text-white tracking-tighter mb-6 leading-[0.9]">
+                Divine <span className="text-primary italic">Purity</span><br />
+                Organic Bliss.
+              </h2>
+              <p className="text-xl text-emerald-50/70 font-medium mb-10 max-w-lg leading-relaxed">
+                Elevating the vegetarian craft in Bhaktapur. 110% committed to ethical, organic, and eggless gastronomy.
+              </p>
+              <div className="flex flex-wrap gap-5">
+                <div className="flex items-center gap-3 bg-white/10 backdrop-blur-xl px-6 py-3 rounded-2xl border border-white/20 shadow-xl transition-all hover:bg-white/20">
+                  <div className="bg-emerald-500/30 p-2 rounded-lg">
+                    <MapPin className="h-4 w-4 text-emerald-300" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Sanctuary</p>
+                    <p className="text-sm font-bold text-white tracking-tight">Radhe Radhe, Bhaktapur</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-white/10 backdrop-blur-xl px-6 py-3 rounded-2xl border border-white/20 shadow-xl transition-all hover:bg-white/20">
+                  <div className="bg-emerald-500/30 p-2 rounded-lg">
+                    <Clock className="h-4 w-4 text-emerald-300" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Status</p>
+                    <p className="text-sm font-bold text-white tracking-tight">Accepting Orders</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          {/* Circular Accent */}
+          <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-primary/20 rounded-full blur-[100px] z-10" />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar - Search & Categories */}
@@ -277,26 +318,21 @@ export default function CustomerHome() {
                 {filteredItems.map((item) => (
                   <Card
                     key={item.id}
-                    className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-105"
+                    className="premium-card group cursor-pointer overflow-hidden border-none"
                     onClick={() => setSelectedItem(item)}
                   >
                     <CardContent className="p-4">
                       {/* Item Header with Badges */}
                       <div className="flex justify-between items-start gap-2 mb-3">
                         <div className="flex-1">
-                          <h3 className="font-bold text-lg line-clamp-1">
+                          <h3 className="font-black text-xl tracking-tighter text-emerald-950 line-clamp-1 italic">
                             {item.name}
                           </h3>
                         </div>
-                        {item.veg ? (
-                          <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 rounded-full font-medium flex-shrink-0">
-                            🥬 Veg
-                          </span>
-                        ) : (
-                          <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-100 rounded-full font-medium flex-shrink-0">
-                            🍗 Non-Veg
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 bg-emerald-100/50 px-2 py-1 rounded-full border border-emerald-200 shadow-sm">
+                          <Leaf className="h-3 w-3 text-emerald-600" />
+                          <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Pure Veg</span>
+                        </div>
                       </div>
 
                       {/* Description */}
@@ -322,17 +358,17 @@ export default function CustomerHome() {
 
                       {/* Price and Action */}
                       <div className="flex items-center justify-between">
-                        <p className="font-bold text-xl text-primary">₹{item.price}</p>
+                        <p className="font-black text-2xl text-primary tracking-tighter italic">Rs.{item.price}</p>
                         <Button
                           size="sm"
-                          className="gap-1"
+                          className="h-10 px-6 rounded-xl font-black border-none shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all hover:scale-105"
                           onClick={(e) => {
                             e.stopPropagation();
                             addToCart(item);
                           }}
                         >
-                          <Plus className="h-3 w-3" />
-                          Add
+                          <Plus className="h-4 w-4 mr-1" />
+                          ACQUIRE
                         </Button>
                       </div>
                     </CardContent>
@@ -365,7 +401,7 @@ export default function CustomerHome() {
                             <div className="flex-1">
                               <p className="font-medium text-sm">{item.name}</p>
                               <p className="text-xs text-muted-foreground">
-                                ₹{item.price} each
+                                Rs.{item.price} each
                               </p>
                             </div>
                             <div className="flex items-center gap-1">
@@ -398,22 +434,22 @@ export default function CustomerHome() {
                       <div className="space-y-2 pt-4 border-t border-border">
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Subtotal</span>
-                          <span className="font-medium">₹{cartTotal.toFixed(2)}</span>
+                          <span className="font-medium">Rs.{cartTotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Delivery Fee</span>
-                          <span className="font-medium">₹40</span>
+                          <span className="font-medium">Rs.40</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">VAT (13%)</span>
                           <span className="font-medium text-green-600">
-                            ₹{Math.round(cartTotal * 0.13).toFixed(2)}
+                            Rs.{Math.round(cartTotal * 0.13).toFixed(2)}
                           </span>
                         </div>
                         <div className="flex justify-between font-bold pt-3 border-t border-border text-lg">
                           <span>Total</span>
                           <span className="text-primary">
-                            ₹{(cartTotal + 40 + Math.round(cartTotal * 0.13)).toFixed(2)}
+                            Rs.{(cartTotal + 40 + Math.round(cartTotal * 0.13)).toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -459,7 +495,7 @@ export default function CustomerHome() {
               </div>
 
               <div className="p-4 bg-secondary rounded-lg">
-                <p className="text-2xl font-bold">₹{selectedItem.price}</p>
+                <p className="text-2xl font-bold">Rs.{selectedItem.price}</p>
               </div>
 
               <Button

@@ -28,7 +28,9 @@ export default function BillDisplay({ bill, showActions = true }: BillDisplayPro
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-2xl font-bold">{bill.restaurantName}</CardTitle>
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              🌿 {bill.restaurantName}
+            </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">{bill.restaurantAddress}</p>
             <p className="text-sm text-muted-foreground">PAN: {bill.restaurantPan}</p>
           </div>
@@ -114,9 +116,9 @@ export default function BillDisplay({ bill, showActions = true }: BillDisplayPro
               >
                 <div className="col-span-5">{item.name}</div>
                 <div className="col-span-2 text-center">{item.quantity}</div>
-                <div className="col-span-2 text-right">₹{item.unitPrice.toFixed(2)}</div>
+                <div className="col-span-2 text-right">Rs.{item.unitPrice.toFixed(2)}</div>
                 <div className="col-span-3 text-right font-medium">
-                  ₹{(item.quantity * item.unitPrice).toFixed(2)}
+                  Rs.{(item.quantity * item.unitPrice).toFixed(2)}
                 </div>
               </div>
             ))}
@@ -127,7 +129,7 @@ export default function BillDisplay({ bill, showActions = true }: BillDisplayPro
         <div className="space-y-2 pt-4 border-t">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>₹{bill.subtotal.toFixed(2)}</span>
+            <span>Rs.{bill.subtotal.toFixed(2)}</span>
           </div>
 
           {bill.discountAmount > 0 && (
@@ -135,32 +137,32 @@ export default function BillDisplay({ bill, showActions = true }: BillDisplayPro
               <span className="text-muted-foreground">
                 Discount ({bill.discountPercent}%)
               </span>
-              <span className="text-red-600">-₹{bill.discountAmount.toFixed(2)}</span>
+              <span className="text-red-600">-Rs.{bill.discountAmount.toFixed(2)}</span>
             </div>
           )}
 
           <div className="flex justify-between text-sm bg-blue-50 dark:bg-blue-950 p-2 rounded">
             <span className="font-medium">Taxable Amount</span>
-            <span className="font-medium">₹{bill.taxableAmount.toFixed(2)}</span>
+            <span className="font-medium">Rs.{bill.taxableAmount.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
               VAT ({(VAT_RATE * 100).toFixed(0)}%)
             </span>
-            <span>₹{bill.vatAmount.toFixed(2)}</span>
+            <span>Rs.{bill.vatAmount.toFixed(2)}</span>
           </div>
 
           {bill.deliveryFee > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Delivery Charge</span>
-              <span>₹{bill.deliveryFee.toFixed(2)}</span>
+              <span>Rs.{bill.deliveryFee.toFixed(2)}</span>
             </div>
           )}
 
           <div className="flex justify-between text-lg font-bold pt-2 border-t">
             <span>Total Amount</span>
-            <span className="text-primary">₹{bill.totalAmount.toFixed(2)}</span>
+            <span className="text-primary">Rs.{bill.totalAmount.toFixed(2)}</span>
           </div>
         </div>
 

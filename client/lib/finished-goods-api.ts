@@ -1,7 +1,4 @@
-import { Ingredient } from "./inventory-api";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-const API_FINISHED_GOODS = `${API_URL}/finished-goods`;
+import { api } from './api-client';
 
 export interface RecipeItem {
     ingredientId: number;
@@ -38,40 +35,21 @@ export interface ProductionRecord {
 }
 
 export const getFinishedGoods = async (): Promise<FinishedGood[]> => {
-    const response = await fetch(API_FINISHED_GOODS);
-    if (!response.ok) throw new Error("Failed to fetch finished goods");
-    return response.json();
+    return api.get("/finished-goods");
 };
 
 export const createFinishedGood = async (good: Partial<FinishedGood>): Promise<FinishedGood> => {
-    const response = await fetch(API_FINISHED_GOODS, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(good),
-    });
-    if (!response.ok) throw new Error("Failed to create finished good");
-    return response.json();
+    return api.post("/finished-goods", good);
 };
 
 export const produceFinishedGood = async (id: string, quantity: number): Promise<ProductionRecord> => {
-    const response = await fetch(`${API_FINISHED_GOODS}/${id}/produce`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity }),
-    });
-    if (!response.ok) throw new Error("Failed to produce finished good");
-    return response.json();
+    return api.post(`/finished-goods/${id}/produce`, { quantity });
 };
 
 export const getProductionRecords = async (): Promise<ProductionRecord[]> => {
-    const response = await fetch(`${API_FINISHED_GOODS}/production-history`);
-    if (!response.ok) throw new Error("Failed to fetch production history");
-    return response.json();
+    return api.get("/finished-goods/production-history");
 };
 
 export const deleteFinishedGood = async (id: string): Promise<void> => {
-    const response = await fetch(`${API_FINISHED_GOODS}/${id}`, {
-        method: "DELETE",
-    });
-    if (!response.ok) throw new Error("Failed to delete finished good");
+    return api.delete(`/finished-goods/${id}`);
 };

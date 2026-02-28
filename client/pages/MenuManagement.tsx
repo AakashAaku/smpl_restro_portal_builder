@@ -16,24 +16,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Plus, Edit2, Trash2, Search, ChefHat, X, Leaf, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Search } from "lucide-react";
 import {
   MenuItem,
   getMenuItems,
   createMenuItem,
   updateMenuItem,
-  deleteMenuItem
+  deleteMenuItem,
+  getMenuItemRecipe,
+  updateMenuItemRecipe,
+  Recipe
 } from "@/lib/menu";
+import { getIngredients, Ingredient } from "@/lib/inventory-api";
 import { toast } from "sonner";
 
 const categories = [
+  "Breakfast",
+  "Snacks",
   "Main Course",
-  "Appetizers",
-  "Breads",
   "Desserts",
   "Beverages",
-  "Sides",
+  "Special Combos",
 ];
 
 export default function MenuManagement() {
@@ -43,6 +47,13 @@ export default function MenuManagement() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Recipe State
+  const [isRecipeDialogOpen, setIsRecipeDialogOpen] = useState(false);
+  const [activeMenuItem, setActiveMenuItem] = useState<MenuItem | null>(null);
+  const [currentRecipe, setCurrentRecipe] = useState<{ ingredientId: number, quantity: number }[]>([]);
+  const [allIngredients, setAllIngredients] = useState<Ingredient[]>([]);
+  const [isSavingRecipe, setIsSavingRecipe] = useState(false);
 
   // Form state
   const [formState, setFormState] = useState<Omit<MenuItem, "id">>({
@@ -56,6 +67,7 @@ export default function MenuManagement() {
 
   useEffect(() => {
     fetchItems();
+    fetchIngredients(); // Added
   }, []);
 
   const fetchItems = async () => {
@@ -68,6 +80,59 @@ export default function MenuManagement() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchIngredients = async () => {
+    try {
+      const data = await getIngredients();
+      setAllIngredients(data);
+    } catch (error) {
+      console.error("Failed to load ingredients");
+    }
+  };
+
+  const handleOpenRecipe = async (item: MenuItem) => {
+    setActiveMenuItem(item);
+    setIsRecipeDialogOpen(true);
+    try {
+      const recipeData = await getMenuItemRecipe(item.id);
+      setCurrentRecipe(recipeData.map(r => ({
+        ingredientId: r.ingredientId,
+        quantity: r.quantity
+      })));
+    } catch (error) {
+      toast.error("Failed to load recipe");
+      setCurrentRecipe([]);
+    }
+  };
+
+  const handleSaveRecipe = async () => {
+    if (!activeMenuItem) return;
+    setIsSavingRecipe(true);
+    try {
+      await updateMenuItemRecipe(activeMenuItem.id, currentRecipe);
+      toast.success("Recipe updated successfully");
+      setIsRecipeDialogOpen(false);
+    } catch (error) {
+      toast.error("Failed to save recipe");
+    } finally {
+      setIsSavingRecipe(false);
+    }
+  };
+
+  const addRecipeRow = () => {
+    if (allIngredients.length === 0) return;
+    setCurrentRecipe([...currentRecipe, { ingredientId: allIngredients[0].id, quantity: 0 }]);
+  };
+
+  const removeRecipeRow = (index: number) => {
+    setCurrentRecipe(currentRecipe.filter((_, i) => i !== index));
+  };
+
+  const updateRecipeRow = (index: number, field: string, value: any) => {
+    const updated = [...currentRecipe];
+    updated[index] = { ...updated[index], [field]: value };
+    setCurrentRecipe(updated);
   };
 
   const filteredItems = items.filter((item) => {
@@ -137,13 +202,21 @@ export default function MenuManagement() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Menu Management
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Leaf className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+              VenzoSmart • Culinary Database
+            </span>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            Menu <span className="text-primary italic">Catalogue</span>
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your restaurant menu items and categories
+          <p className="text-muted-foreground mt-1 font-medium italic">
+            "110% Pure Veg & Eggless Excellence"
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -151,9 +224,9 @@ export default function MenuManagement() {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2" onClick={() => resetForm()}>
-              <Plus className="h-4 w-4" />
-              Add Item
+            <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
+              <Plus className="h-5 w-5" />
+              CRAFT NEW ITEM
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
@@ -210,7 +283,7 @@ export default function MenuManagement() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price (₹)</Label>
+                  <Label htmlFor="price">Price (Rs.)</Label>
                   <Input
                     id="price"
                     type="number"
@@ -298,9 +371,15 @@ export default function MenuManagement() {
       </div>
 
       {/* Items Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Menu Items ({filteredItems.length})</CardTitle>
+      <Card className="premium-card border-none shadow-2xl overflow-hidden">
+        <CardHeader className="border-b border-sidebar-border/50 bg-emerald-50/30">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-extrabold tracking-tight">Active Menu Items ({filteredItems.length})</CardTitle>
+            <div className="flex items-center gap-2 text-[10px] font-black text-emerald-600 bg-white px-3 py-1 rounded-full shadow-sm border border-emerald-100">
+              <Sparkles className="h-3 w-3" />
+              ALL ITEMS ARE VEG
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -334,17 +413,28 @@ export default function MenuManagement() {
                   {filteredItems.map((item) => (
                     <tr
                       key={item.id}
-                      className="border-b border-border hover:bg-secondary/30 transition-colors"
+                      className="border-b border-sidebar-border/50 hover:bg-emerald-50/30 transition-colors group"
                     >
-                      <td className="py-4 px-4 font-medium">{item.name}</td>
-                      <td className="py-4 px-4">{item.category}</td>
-                      <td className="py-4 px-4 font-semibold">₹{item.price}</td>
-                      <td className="py-4 px-4">{item.prepTime} min</td>
-                      <td className="py-4 px-4">
+                      <td className="py-5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center font-black text-xs text-muted-foreground border-2 border-white shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
+                            {item.name.charAt(0)}
+                          </div>
+                          <span className="font-bold text-emerald-950">{item.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-5 px-4">
+                        <span className="text-xs font-bold px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
+                          {item.category}
+                        </span>
+                      </td>
+                      <td className="py-5 px-4 font-black text-lg text-emerald-900 border-none">Rs.{item.price}</td>
+                      <td className="py-5 px-4 text-muted-foreground font-medium">{item.prepTime} min</td>
+                      <td className="py-5 px-4">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${item.status === "available"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                          className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${item.status === "available"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-rose-100 text-rose-700"
                             }`}
                         >
                           {item.status === "available"
@@ -352,19 +442,29 @@ export default function MenuManagement() {
                             : "Unavailable"}
                         </span>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="flex gap-2">
+                      <td className="py-5 px-4">
+                        <div className="flex gap-1">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-9 w-9 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 rounded-xl"
+                            onClick={() => handleOpenRecipe(item)}
+                            title="Manage Recipe"
+                          >
+                            <ChefHat className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl"
                             onClick={() => handleEdit(item)}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
+                            size="icon"
+                            className="h-9 w-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl"
                             onClick={() => handleDelete(item.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -379,6 +479,110 @@ export default function MenuManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Recipe Management Dialog */}
+      <Dialog open={isRecipeDialogOpen} onOpenChange={setIsRecipeDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Recipe Management: {activeMenuItem?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Define the ingredients and quantities required for one serving of this item.
+              Inventory will be automatically deducted when orders are prepared.
+            </p>
+
+            <div className="space-y-3">
+              {currentRecipe.length === 0 ? (
+                <div className="text-center py-6 bg-secondary/20 rounded-lg border-2 border-dashed">
+                  <p className="text-sm text-muted-foreground">No ingredients added yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-12 gap-3 items-center font-medium text-sm px-2">
+                  <div className="col-span-6">Ingredient</div>
+                  <div className="col-span-4">Quantity</div>
+                  <div className="col-span-2"></div>
+                </div>
+              )}
+
+              {currentRecipe.map((row, index) => {
+                const ingredient = allIngredients.find(i => i.id === row.ingredientId);
+                return (
+                  <div key={index} className="grid grid-cols-12 gap-3 items-center">
+                    <div className="col-span-6">
+                      <Select
+                        value={row.ingredientId.toString()}
+                        onValueChange={(val) => updateRecipeRow(index, 'ingredientId', parseInt(val))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allIngredients.map(ing => (
+                            <SelectItem key={ing.id} value={ing.id.toString()}>
+                              {ing.name} ({ing.unit})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-4 relative">
+                      <Input
+                        type="number"
+                        step="0.001"
+                        value={row.quantity}
+                        onChange={(e) => updateRecipeRow(index, 'quantity', parseFloat(e.target.value) || 0)}
+                        className="pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                        {ingredient?.unit || ''}
+                      </span>
+                    </div>
+                    <div className="col-span-2 flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive h-8 w-8 p-0"
+                        onClick={() => removeRecipeRow(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full gap-2 border-dashed"
+              onClick={addRecipeRow}
+            >
+              <Plus className="h-4 w-4" />
+              Add Ingredient
+            </Button>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setIsRecipeDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveRecipe}
+              disabled={isSavingRecipe}
+            >
+              {isSavingRecipe ? "Saving..." : "Save Recipe"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

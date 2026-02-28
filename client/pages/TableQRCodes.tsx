@@ -1,27 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
-import { Download, Printer, QrCode } from "lucide-react";
-
-interface Table {
-  id: number;
-  number: string;
-  capacity: number;
-}
-
-const TABLES: Table[] = [
-  { id: 1, number: "A1", capacity: 2 },
-  { id: 2, number: "A2", capacity: 4 },
-  { id: 3, number: "A3", capacity: 4 },
-  { id: 4, number: "A4", capacity: 6 },
-  { id: 5, number: "B1", capacity: 2 },
-  { id: 6, number: "B2", capacity: 4 },
-  { id: 7, number: "B3", capacity: 6 },
-  { id: 8, number: "B4", capacity: 8 },
-];
+import { Download, Printer, QrCode, Loader2, Leaf, Sparkles, Scan, Globe } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getTables } from "@/lib/tables-api";
 
 function generateQRCodeDataURL(tableNumber: string): string {
   // Generate a simple QR code URL using QR server API
+  // Using window.location.origin supports local network address (e.g., http://192.168.x.x:3000)
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
     `${window.location.origin}/table-order?table=${tableNumber}`
   )}`;
@@ -30,6 +16,11 @@ function generateQRCodeDataURL(tableNumber: string): string {
 
 export default function TableQRCodes() {
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
+
+  const { data: tables = [], isLoading } = useQuery({
+    queryKey: ["tables"],
+    queryFn: getTables,
+  });
 
   const handlePrintQRCode = (tableNumber: string) => {
     const printWindow = window.open("", "_blank");
@@ -149,7 +140,7 @@ export default function TableQRCodes() {
           <div class="page">
     `;
 
-    TABLES.forEach((table, index) => {
+    tables.forEach((table, index) => {
       const qrDataUrl = generateQRCodeDataURL(table.number);
       htmlContent += `
         <div class="qr-container">
@@ -159,7 +150,7 @@ export default function TableQRCodes() {
         </div>
       `;
 
-      if ((index + 1) % 4 === 0 && index + 1 < TABLES.length) {
+      if ((index + 1) % 4 === 0 && index + 1 < tables.length) {
         htmlContent += `
           </div>
           <div class="page">
@@ -183,46 +174,80 @@ export default function TableQRCodes() {
 
   return (
     <div className="space-y-8">
-        {/* Header */}
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Table QR Codes</h1>
-          <p className="text-muted-foreground mt-2">
-            Generate and manage QR codes for table ordering
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Leaf className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+              VenzoSmart • Digital Access
+            </span>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            Table <span className="text-primary italic">Portals</span>
+          </h1>
+          <p className="text-muted-foreground mt-1 font-medium italic">
+            "Seamless Digital Integration for Organic Dining"
           </p>
         </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 flex-wrap">
-          <Button
-            onClick={handlePrintAllQRCodes}
-            className="gap-2"
-            size="lg"
-          >
-            <Printer className="h-4 w-4" />
-            Print All QR Codes
-          </Button>
+        <div className="bg-emerald-50/50 px-6 py-3 rounded-2xl border border-emerald-100/50 backdrop-blur-sm shadow-sm group hover:border-primary/30 transition-all">
+          <div className="flex items-center gap-2 mb-1">
+            <Globe className="h-3 w-3 text-emerald-600 group-hover:animate-pulse" />
+            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Active Network Node</p>
+          </div>
+          <p className="text-sm font-black text-emerald-900 font-mono tracking-tight">{window.location.origin}</p>
         </div>
+      </div>
 
-        {/* QR Code Grid */}
+      {/* Action Buttons */}
+      <div className="flex gap-4">
+        <Button
+          onClick={handlePrintAllQRCodes}
+          className="h-12 px-8 rounded-xl font-black border-none shadow-xl shadow-primary/20 gap-3 transition-all hover:scale-[1.02] bg-primary text-white"
+          disabled={isLoading || tables.length === 0}
+        >
+          {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Printer className="h-5 w-5" />}
+          LAMINATE ALL ACCESS POINTS
+        </Button>
+      </div>
+
+      {/* QR Code Grid */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 space-y-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-muted-foreground italic text-lg">Generating table access points...</p>
+        </div>
+      ) : tables.length === 0 ? (
+        <div className="text-center py-20 bg-secondary/20 rounded-xl border-2 border-dashed border-muted">
+          <p className="text-muted-foreground mb-4">No tables found to generate codes for.</p>
+          <Button variant="outline" onClick={() => window.location.href = '/admin/tables'}>Configure Tables First</Button>
+        </div>
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {TABLES.map((table) => {
+          {tables.map((table) => {
             const qrDataUrl = generateQRCodeDataURL(table.number);
             return (
               <Card
                 key={table.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
+                className="hover:shadow-lg transition-shadow cursor-pointer overflow-hidden border-2 hover:border-primary/50"
                 onClick={() => setSelectedTable(table.number)}
               >
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-center text-xl">
-                    Table {table.number}
+                <CardHeader className="pb-4 bg-emerald-50/30 border-b border-emerald-900/5 items-center">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 italic">Venzosmart • Station</span>
+                  </div>
+                  <CardTitle className="text-3xl font-black tracking-tighter text-emerald-900">
+                    {table.number}
                   </CardTitle>
-                  <p className="text-center text-sm text-muted-foreground">
-                    Capacity: {table.capacity}
-                  </p>
+                  <div className="flex items-center gap-1.5 bg-white/50 px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm mt-1">
+                    <Scan className="h-3 w-3 text-emerald-600" />
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Capacity: {table.capacity}</span>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-white p-3 rounded border border-gray-200 flex justify-center">
+                <CardContent className="space-y-4 pt-4">
+                  <div className="bg-white p-3 rounded border border-gray-200 flex justify-center shadow-inner">
                     <img
                       src={qrDataUrl}
                       alt={`Table ${table.number} QR Code`}
@@ -239,7 +264,7 @@ export default function TableQRCodes() {
                         handlePrintQRCode(table.number);
                       }}
                     >
-                      <Printer className="h-4 w-4" />
+                      <Printer className="h-3 w-3" />
                       Print
                     </Button>
                     <Button
@@ -251,13 +276,14 @@ export default function TableQRCodes() {
                         handleDownloadQRCode(table.number);
                       }}
                     >
-                      <Download className="h-4 w-4" />
-                      Download
+                      <Download className="h-3 w-3" />
+                      Save
                     </Button>
                   </div>
                   <Button
                     size="sm"
                     className="w-full gap-2"
+                    variant="secondary"
                     onClick={(e) => {
                       e.stopPropagation();
                       window.open(
@@ -267,13 +293,14 @@ export default function TableQRCodes() {
                     }}
                   >
                     <QrCode className="h-4 w-4" />
-                    Test Scan
+                    Preview Ordering
                   </Button>
                 </CardContent>
               </Card>
             );
           })}
         </div>
+      )}
     </div>
   );
 }

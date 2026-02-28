@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Users, DollarSign, CheckCircle, Clock, LogOut } from "lucide-react";
+import { Calendar, Users, DollarSign, CheckCircle, Clock, LogOut, Leaf, Sparkles, PartyPopper, History, UtensilsCrossed, ShieldCheck, Heart, Star } from "lucide-react";
 import { logout } from "@/lib/auth";
 import {
   getAllEventTypes,
@@ -131,7 +131,20 @@ export default function EventBooking() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           {/* Top Row */}
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-2xl font-bold">Event Booking</h1>
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-emerald-600 to-green-500 text-white p-2.5 rounded-xl shadow-lg organic-glow scale-110">
+                <Leaf className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black tracking-tighter text-emerald-950 flex items-center gap-1">
+                  VENZO<span className="text-primary italic">SMART</span>
+                  <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" />
+                </h1>
+                <p className="text-[9px] text-primary font-black uppercase tracking-[0.3em] -mt-1 bg-primary/5 px-2 py-0.5 rounded-full inline-block">
+                  110% Pure Veg & Eggless
+                </p>
+              </div>
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -144,30 +157,33 @@ export default function EventBooking() {
           </div>
 
           {/* Navigation */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate("/customer/home")}
-              className="gap-2"
+              className="gap-2 rounded-full px-6 h-10 font-bold border-emerald-100 bg-white hover:bg-emerald-50 whitespace-nowrap"
             >
-              🍽️ Menu
+              <UtensilsCrossed className="h-4 w-4 text-primary" />
+              CURATED MENU
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate("/customer/orders")}
-              className="gap-2"
+              className="gap-2 rounded-full px-6 h-10 font-bold border-emerald-100 bg-white hover:bg-emerald-50 whitespace-nowrap"
             >
-              📦 My Orders
+              <History className="h-4 w-4 text-primary" />
+              PREVIOUS ORDERS
             </Button>
             <Button
               variant="default"
               size="sm"
               onClick={() => navigate("/customer/events")}
-              className="gap-2"
+              className="gap-2 rounded-full px-6 h-10 font-black shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all hover:scale-105 whitespace-nowrap"
             >
-              🎉 Book Event
+              <PartyPopper className="h-4 w-4" />
+              GALA BOOKING
             </Button>
           </div>
         </div>
@@ -209,8 +225,8 @@ export default function EventBooking() {
                           <DollarSign className="h-4 w-4" />
                           <span>Base Price</span>
                         </div>
-                        <p className="font-semibold">
-                          ₹{eventType.basePrice.toLocaleString()}
+                        <p className="font-semibold text-primary italic">
+                          Rs.{eventType.basePrice.toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -349,16 +365,16 @@ export default function EventBooking() {
                             <p className="text-sm text-muted-foreground">
                               Estimated Price
                             </p>
-                            <p className="text-2xl font-bold">
-                              ₹
+                            <p className="text-2xl font-black text-primary tracking-tighter italic">
+                              Rs.
                               {calculatePrice(
                                 eventType.basePrice,
                                 parseInt(bookingForm.attendees) || eventType.minAttendees
                               ).toLocaleString()}
                             </p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Base: ₹{eventType.basePrice.toLocaleString()} +
-                              ₹500/person
+                            <p className="text-[10px] text-emerald-700/60 font-black uppercase tracking-widest mt-2">
+                              Base: Rs.{eventType.basePrice.toLocaleString()} +
+                              Rs.500/guest
                             </p>
                           </div>
 
@@ -449,13 +465,12 @@ export default function EventBooking() {
 
                         <div className="flex flex-col items-end gap-2">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              booking.status === "confirmed"
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${booking.status === "confirmed"
                                 ? "bg-green-100 text-green-800"
                                 : booking.status === "pending"
                                   ? "bg-amber-100 text-amber-800"
                                   : "bg-gray-100 text-gray-800"
-                            }`}
+                              }`}
                           >
                             {booking.status === "confirmed" && (
                               <span className="flex items-center gap-1">

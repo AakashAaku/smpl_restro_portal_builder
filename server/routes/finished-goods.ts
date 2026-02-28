@@ -1,85 +1,204 @@
 import { RequestHandler } from "express";
+import prisma from "../lib/prisma";
 
-export interface RecipeItem {
-    ingredientId: number;
-    name: string;
-    quantity: number;
-    unit: string;
-}
+export const getFinishedGoods: RequestHandler = async (_req, res) => {
+    try {
+        const goods = await prisma.menuItem.findMany({
+            include: {
+                recipes: {
+                    include: { ingredient: true },
+                },
+            },
+        });
 
-export interface FinishedGood {
-    id: number;
-    name: string;
-    category: string;
-    price: number;
-    cost: number;
-    stock: number;
-    recipe: RecipeItem[];
-}
+        // Format for frontend
+        const formatted = goods.map(g => {
+            const recipe = g.recipes.map(r => ({
+                ingredientId: r.ingredientId,
+                ingredientName: r.ingredient.name,
+                quantityRequired: r.quantity,
+                unit: r.ingredient.unit
+            }));
 
-let finishedGoods: FinishedGood[] = [];
+            const totalCost = g.recipes.reduce((sum, r) => sum + (r.quantity * r.ingredient.unitPrice), 0);
 
-export const getFinishedGoods: RequestHandler = (_req, res) => {
-    res.json(finishedGoods);
+            return {
+                id: g.id.toString(),
+                name: g.name,
+                category: g.category,
+                recipe,
+                totalCost,
+                sellingPrice: g.price,
+                currentStock: g.currentStock,
+                createdAt: g.createdAt.toISOString(),
+                updatedAt: g.updatedAt.toISOString(),
+            };
+        });
+
+        res.json(formatted);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch finished goods" });
+    }
 };
 
-export const createFinishedGood: RequestHandler = (req, res) => {
-    const { name, category, price, cost, recipe } = req.body;
+export const createFinishedGood: RequestHandler = async (req, res) => {
+    try {
+        const { name, category, price, prepTime, description, recipe } = req.body;
 
-    if (!name || !category || price === undefined || !recipe) {
-        res.status(400).json({ error: "Missing required fields" });
-        return;
+        if (!name || !category || price === undefined) {
+            res.status(400).json({ error: "Missing required fields" });
+            return;
+        }
+
+        const newGood = await prisma.menuItem.create({
+            data: {
+                name,
+                category,
+                price: parseFloat(price),
+                prepTime: parseInt(prepTime || 15),
+                description,
+                recipes: {
+                    create: recipe?.map((r: any) => ({
+                        ingredientId: r.ingredientId,
+                        quantity: parseFloat(r.quantity),
+                    })),
+                },
+            },
+        });
+
+        res.status(201).json(newGood);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to create finished good" });
     }
-
-    const newGood: FinishedGood = {
-        id: Math.max(...finishedGoods.map((g) => g.id), 0) + 1,
-        name,
-        category,
-        price: parseFloat(price),
-        cost: parseFloat(cost || 0),
-        stock: 0,
-        recipe: recipe || [],
-    };
-
-    finishedGoods.push(newGood);
-    res.status(201).json(newGood);
 };
 
-export const updateFinishedGood: RequestHandler = (req, res) => {
-    const { id } = req.params;
-    const { name, category, price, cost, recipe } = req.body;
+export const updateFinishedGood: RequestHandler = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, category, price, description, recipe } = req.body;
 
-    const index = finishedGoods.findIndex((g) => g.id === parseInt(id as string));
-    if (index === -1) {
-        res.status(404).json({ error: "Finished good not found" });
-        return;
+        // First delete old recipes if providing new one
+        if (recipe) {
+            await prisma.recipe.deleteMany({
+                where: { menuItemId: parseInt(id) },
+            });
+        }
+
+        const updatedGood = await prisma.menuItem.update({
+            where: { id: parseInt(id) },
+            data: {
+                name,
+                category,
+                price: price !== undefined ? parseFloat(price) : undefined,
+                description,
+                recipes: recipe ? {
+                    create: recipe.map((r: any) => ({
+                        ingredientId: r.ingredientId,
+                        quantity: parseFloat(r.quantity),
+                    })),
+                } : undefined,
+            },
+        });
+
+        res.json(updatedGood);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to update finished good" });
     }
-
-    finishedGoods[index] = {
-        ...finishedGoods[index],
-        name: name || finishedGoods[index].name,
-        category: category || finishedGoods[index].category,
-        price: price !== undefined ? parseFloat(price) : finishedGoods[index].price,
-        cost: cost !== undefined ? parseFloat(cost) : finishedGoods[index].cost,
-        recipe: recipe || finishedGoods[index].recipe,
-    };
-
-    res.json(finishedGoods[index]);
 };
 
-export const produceFinishedGood: RequestHandler = (req, res) => {
-    const { id } = req.params;
-    const { quantity } = req.body;
+export const produceFinishedGood: RequestHandler = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { quantity } = req.body;
 
-    const good = finishedGoods.find((g) => g.id === parseInt(id as string));
-    if (!good) {
-        res.status(404).json({ error: "Finished good not found" });
-        return;
+        const prodQuantity = parseFloat(quantity || 1);
+
+        const result = await prisma.$transaction(async (tx) => {
+            // Get the recipe
+            const menuItem = await tx.menuItem.findUnique({
+                where: { id: parseInt(id) },
+                include: { recipes: true },
+            });
+
+            if (!menuItem) throw new Error("Item not found");
+
+            // Deduct ingredients from stock
+            for (const recipeItem of menuItem.recipes) {
+                const needed = recipeItem.quantity * prodQuantity;
+                await tx.ingredient.update({
+                    where: { id: recipeItem.ingredientId },
+                    data: {
+                        currentStock: { decrement: needed },
+                    },
+                });
+
+                await tx.stockMovement.create({
+                    data: {
+                        ingredientId: recipeItem.ingredientId,
+                        quantity: needed,
+                        type: "OUT",
+                        reason: `Produced ${prodQuantity} units of ${menuItem.name}`,
+                    },
+                });
+            }
+
+            // Record production history
+            await tx.productionRecord.create({
+                data: {
+                    menuItemId: parseInt(id),
+                    quantityProduced: prodQuantity,
+                },
+            });
+
+            // Increment finished good stock
+            await tx.menuItem.update({
+                where: { id: parseInt(id) },
+                data: {
+                    currentStock: { increment: prodQuantity },
+                },
+            });
+
+            return {
+                id: menuItem.id.toString(),
+                name: menuItem.name,
+                category: menuItem.category
+            };
+        });
+
+        res.json({ message: "Production recorded", good: result });
+    } catch (error) {
+        res.status(500).json({ error: (error as Error).message || "Failed to record production" });
     }
+};
 
-    // In a real app, we would deduct raw materials here.
-    // For now, satisfy the user's need for functional flow.
-    good.stock += parseFloat(quantity || 1);
+export const getProductionRecords: RequestHandler = async (_req, res) => {
+    try {
+        const records = await prisma.productionRecord.findMany({
+            include: {
+                menuItem: {
+                    select: { name: true, recipes: { include: { ingredient: true } } }
+                }
+            },
+            orderBy: { createdAt: "desc" },
+        });
 
-    res.json({ message: "Production recorded", good });
+        // Format for frontend
+        const formatted = records.map(r => ({
+            id: r.id.toString(),
+            finishedGoodId: r.menuItemId.toString(),
+            finishedGoodName: r.menuItem.name,
+            quantityProduced: r.quantityProduced,
+            dateProduced: r.dateProduced.toISOString(),
+            rawMaterialsUsed: r.menuItem.recipes.map(recipe => ({
+                ingredientId: recipe.ingredientId,
+                ingredientName: recipe.ingredient.name,
+                quantityUsed: recipe.quantity * r.quantityProduced,
+                unit: recipe.ingredient.unit
+            }))
+        }));
+
+        res.json(formatted);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch production history" });
+    }
 };

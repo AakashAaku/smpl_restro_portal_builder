@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
-import { Plus, TrendingUp, DollarSign, Package, Calendar, Loader2 } from "lucide-react";
+import { Plus, TrendingUp, DollarSign, Package, Calendar, Loader2, Leaf, History, Sparkles, Filter } from "lucide-react";
 import { toast } from "sonner";
 import {
   getPurchases,
@@ -135,20 +135,28 @@ export default function PurchaseManagement() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Purchase Management
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Leaf className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+              VenzoSmart • Procurement & SCM
+            </span>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            Inventory <span className="text-primary italic">Inbound</span>
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Track raw material purchases and procurement costs
+          <p className="text-muted-foreground mt-1 font-medium italic">
+            "Sourcing Freshness, Daily"
           </p>
         </div>
         <Dialog open={isAddingPurchase} onOpenChange={setIsAddingPurchase}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Purchase
+            <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
+              <Plus className="h-5 w-5" />
+              NEW PROCUREMENT
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
@@ -187,7 +195,7 @@ export default function PurchaseManagement() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="unitPrice">Unit Price (₹) *</Label>
+                  <Label htmlFor="unitPrice">Unit Price (Rs.) *</Label>
                   <Input
                     id="unitPrice"
                     type="number"
@@ -281,53 +289,68 @@ export default function PurchaseManagement() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Purchases</p>
-                <p className="text-2xl font-bold mt-2">{stats?.totalPurchases || totalPurchases}</p>
-              </div>
-              <Package className="h-6 w-6 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Cost</p>
-                <p className="text-2xl font-bold mt-2">
-                  ₹{Math.round(stats?.totalCost || totalCost).toLocaleString()}
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Total Procurement</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{stats?.totalPurchases || totalPurchases}</p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  Lifetime records
                 </p>
               </div>
-              <DollarSign className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <Package className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Today Purchases</p>
-                <p className="text-2xl font-bold mt-2">{stats?.todayPurchases || todayPurchases}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Total Expenditure</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
+                  Rs.{Math.round(stats?.totalCost || totalCost).toLocaleString()}
+                </p>
+                <p className="text-[10px] text-rose-600 font-bold mt-2">Inventory investment</p>
               </div>
-              <Calendar className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-sm">
+                <DollarSign className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Suppliers</p>
-                <p className="text-2xl font-bold mt-2">{stats?.uniqueSuppliers || uniqueSuppliers}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Today's Inflow</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{stats?.todayPurchases || todayPurchases}</p>
+                <p className="text-[10px] text-blue-600 font-bold mt-2">Active batches</p>
               </div>
-              <TrendingUp className="h-6 w-6 text-orange-600" />
+              <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                <Calendar className="h-6 w-6" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Active Suppliers</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{stats?.uniqueSuppliers || uniqueSuppliers}</p>
+                <p className="text-[10px] text-amber-600 font-bold mt-2">Verified partners</p>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                <History className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -335,16 +358,28 @@ export default function PurchaseManagement() {
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="all">All Purchases</TabsTrigger>
-          <TabsTrigger value="byMaterial">By Material</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-emerald-50/50 p-1 h-12 rounded-xl max-w-md">
+          <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold">Purchase History</TabsTrigger>
+          <TabsTrigger value="byMaterial" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold">Analytics By Item</TabsTrigger>
         </TabsList>
 
         {/* All Purchases Tab */}
-        <TabsContent value="all" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Purchase History</CardTitle>
+        <TabsContent value="all" className="space-y-4 pt-4">
+          <Card className="premium-card border-none shadow-xl overflow-hidden">
+            <CardHeader className="border-b border-sidebar-border/50 bg-emerald-50/20">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-extrabold tracking-tight">Purchase Logs</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="h-8 rounded-lg font-bold gap-2 bg-white/50 border border-emerald-100 px-3">
+                    <Filter className="h-3 w-3" />
+                    Filter
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 rounded-lg font-bold gap-2 bg-white/50 border border-emerald-100 px-3">
+                    <Sparkles className="h-3 w-3" />
+                    Export
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {purchases.length === 0 ? (
@@ -369,29 +404,38 @@ export default function PurchaseManagement() {
                       {[...purchases].reverse().map((purchase) => (
                         <tr
                           key={purchase.id}
-                          className="border-b border-border hover:bg-secondary/30"
+                          className="border-b border-sidebar-border/30 hover:bg-emerald-50/30 transition-colors group"
                         >
-                          <td className="py-3 px-4 font-medium">
-                            {purchase.ingredientName}
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center font-black text-[10px] text-emerald-600 border border-emerald-100">
+                                {purchase.ingredientName.charAt(0)}
+                              </div>
+                              <span className="font-bold text-emerald-950">{purchase.ingredientName}</span>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-4 px-4 font-medium text-muted-foreground">
                             {purchase.quantity} {purchase.unit}
                           </td>
-                          <td className="py-3 px-4">₹{purchase.unitPrice.toFixed(2)}</td>
-                          <td className="py-3 px-4 font-semibold">
-                            ₹{purchase.totalCost.toFixed(2)}
+                          <td className="py-4 px-4 font-bold text-emerald-800">Rs.{purchase.unitPrice.toFixed(0)}</td>
+                          <td className="py-4 px-4 border-none">
+                            <span className="font-black text-emerald-950 text-base">Rs.{purchase.totalCost.toFixed(0)}</span>
                           </td>
-                          <td className="py-3 px-4">{purchase.supplier}</td>
-                          <td className="py-3 px-4">
-                            {new Date(purchase.purchaseDate).toLocaleDateString()}
+                          <td className="py-4 px-4">
+                            <span className="text-xs font-bold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md border border-slate-200 uppercase tracking-tight">
+                              {purchase.supplier}
+                            </span>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-4 px-4 text-xs font-medium text-muted-foreground">
+                            {new Date(purchase.purchaseDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                          </td>
+                          <td className="py-4 px-4">
                             {purchase.expiryDate ? (
-                              <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
-                                {new Date(purchase.expiryDate).toLocaleDateString()}
+                              <span className="text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 px-2 py-0.5 rounded border border-rose-100">
+                                {new Date(purchase.expiryDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                               </span>
                             ) : (
-                              <span className="text-muted-foreground">N/A</span>
+                              <span className="text-[10px] font-bold text-muted-foreground/40">NO EXPIRY</span>
                             )}
                           </td>
                         </tr>
@@ -437,11 +481,11 @@ export default function PurchaseManagement() {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Avg Price</p>
-                      <p className="font-semibold">₹{avgPrice.toFixed(2)}</p>
+                      <p className="font-semibold">Rs.{avgPrice.toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Total Spent</p>
-                      <p className="font-semibold">₹{totalSpent.toFixed(2)}</p>
+                      <p className="font-semibold">Rs.{totalSpent.toFixed(2)}</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -468,10 +512,10 @@ export default function PurchaseManagement() {
                               {purchase.quantity} {purchase.unit}
                             </td>
                             <td className="py-2 px-4">
-                              ₹{purchase.unitPrice.toFixed(2)}
+                              Rs.{purchase.unitPrice.toFixed(2)}
                             </td>
                             <td className="py-2 px-4 font-semibold">
-                              ₹{purchase.totalCost.toFixed(2)}
+                              Rs.{purchase.totalCost.toFixed(2)}
                             </td>
                             <td className="py-2 px-4">
                               {new Date(purchase.purchaseDate).toLocaleDateString()}

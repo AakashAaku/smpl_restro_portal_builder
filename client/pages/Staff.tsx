@@ -24,6 +24,13 @@ import {
   TrendingUp,
   AlertCircle,
   ChefHat,
+  Leaf,
+  Sparkles,
+  ChevronRight,
+  ShieldCheck,
+  UserCheck,
+  Briefcase,
+  Heart
 } from "lucide-react";
 import {
   StaffMember,
@@ -97,18 +104,28 @@ export default function Staff() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Staff Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage team members, roles, and performance
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Leaf className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+              VenzoSmart • Talent & Culture
+            </span>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            Team <span className="text-primary italic">Directory</span>
+          </h1>
+          <p className="text-muted-foreground mt-1 font-medium italic">
+            "Empowering the Culinary Craftsmen of Bhaktapur"
           </p>
         </div>
         <Dialog open={isAddingStaff} onOpenChange={setIsAddingStaff}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Staff Member
+            <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
+              <Plus className="h-5 w-5" />
+              ONBOARD NEW MEMBER
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -180,53 +197,68 @@ export default function Staff() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Staff</p>
-                <p className="text-2xl font-bold mt-2">{staff.length}</p>
-                <p className="text-xs text-green-600 mt-2">
-                  {stats?.activeStaff || 0} active
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Human Capital</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{staff.length}</p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">{stats?.activeStaff || 0} active specialists</p>
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <Users className="h-6 w-6" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Monthly Yield</p>
+                <p className="text-3xl font-black tracking-tight text-emerald-700">
+                  Rs.{(stats?.monthlyPayroll || 0).toLocaleString()}
                 </p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">Total payroll commitment</p>
               </div>
-              <Users className="h-6 w-6 text-primary" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Monthly Payroll</p>
-                <p className="text-2xl font-bold mt-2">
-                  ₹{(stats?.monthlyPayroll || 0).toLocaleString()}
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Performance Index</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
+                  {stats?.avgPerformance || 0}<span className="text-sm text-muted-foreground">/100</span>
                 </p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">Team aggregate score</p>
               </div>
-              <ChefHat className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <TrendingUp className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Avg Performance</p>
-                <p className="text-2xl font-bold mt-2">{stats?.avgPerformance || 0}/100</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Attendance Gap</p>
+                <p className="text-3xl font-black tracking-tight text-amber-600">{stats?.onLeaveCount || 0}</p>
+                <p className="text-[10px] text-amber-600 font-bold mt-2">Currently on leave</p>
               </div>
-              <TrendingUp className="h-6 w-6 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">On Leave</p>
-                <p className="text-2xl font-bold mt-2">{stats?.onLeaveCount || 0}</p>
+              <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                <AlertCircle className="h-6 w-6" />
               </div>
-              <AlertCircle className="h-6 w-6 text-amber-600" />
             </div>
           </CardContent>
         </Card>
@@ -268,19 +300,31 @@ export default function Staff() {
                   </thead>
                   <tbody>
                     {staff.map((member) => (
-                      <tr key={member.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
-                        <td className="py-4 px-4 font-medium">{member.name}</td>
-                        <td className="py-4 px-4 text-xs capitalize">{member.role}</td>
+                      <tr key={member.id} className="border-b border-sidebar-border/30 hover:bg-emerald-50/30 transition-colors group">
                         <td className="py-4 px-4">
-                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${member.status === 'active' ? 'bg-green-100 text-green-700' :
-                              member.status === 'on-leave' ? 'bg-amber-100 text-amber-700' :
-                                'bg-gray-100 text-gray-700'
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs uppercase">
+                              {member.name.charAt(0)}
+                            </div>
+                            <span className="font-bold text-emerald-950">{member.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-xs font-black uppercase tracking-tight text-muted-foreground">{member.role}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${member.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                            member.status === 'on-leave' ? 'bg-amber-100 text-amber-700' :
+                              'bg-slate-100 text-slate-700'
                             }`}>
                             {member.status}
                           </span>
                         </td>
-                        <td className="py-4 px-4 font-semibold">{member.performance || 0}%</td>
-                        <td className="py-4 px-4 font-semibold">₹{(member.salary || 0).toLocaleString()}</td>
+                        <td className="py-4 px-4 font-black text-emerald-600">{member.performance || 0}%</td>
+                        <td className="py-4 px-4 font-black text-emerald-950">Rs.{(member.salary || 0).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>

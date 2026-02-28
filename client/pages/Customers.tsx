@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
-import { Plus, Users, Crown, TrendingUp, Star } from "lucide-react";
+import { Plus, Users, Crown, TrendingUp, Star, Leaf, Sparkles, ChevronRight, Search, Filter, ShieldCheck, Heart } from "lucide-react";
 import {
   Customer,
   getCustomers,
@@ -87,18 +87,28 @@ export default function Customers() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your customer relationships and loyalty programs
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Leaf className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+              VenzoSmart • CRM & Loyalty
+            </span>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            Customer <span className="text-primary italic">Relations</span>
+          </h1>
+          <p className="text-muted-foreground mt-1 font-medium italic">
+            "Cultivating a Community of Healthy Living"
           </p>
         </div>
         <Dialog open={isAddingCustomer} onOpenChange={setIsAddingCustomer}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Customer
+            <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
+              <Plus className="h-5 w-5" />
+              REGISTER NEW PATRON
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -149,48 +159,67 @@ export default function Customers() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Customers</p>
-                <p className="text-2xl font-bold mt-2">{customers.length}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Patron Base</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{customers.length}</p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">Registered diners</p>
               </div>
-              <Users className="h-6 w-6 text-primary" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <Users className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">VIP Members</p>
-                <p className="text-2xl font-bold mt-2">{stats?.vipCount || 0}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Elite Circle</p>
+                <p className="text-3xl font-black tracking-tight text-amber-600">{stats?.vipCount || 0}</p>
+                <p className="text-[10px] text-amber-600 font-bold mt-2">VIP status members</p>
               </div>
-              <Crown className="h-6 w-6 text-amber-500" />
+              <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                <Crown className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold mt-2">₹{stats?.totalRevenue?.toLocaleString() || "0"}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Lifetime Value</p>
+                <p className="text-3xl font-black tracking-tight text-emerald-700">
+                  Rs.{stats?.totalRevenue?.toLocaleString() || "0"}
+                </p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">Aggregate revenue</p>
               </div>
-              <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <TrendingUp className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Points Pool</p>
-                <p className="text-2xl font-bold mt-2">{stats?.totalLoyaltyPoints?.toLocaleString() || "0"}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Engagement</p>
+                <p className="text-3xl font-black tracking-tight text-purple-600">
+                  {stats?.totalLoyaltyPoints?.toLocaleString() || "0"}
+                </p>
+                <p className="text-[10px] text-purple-600 font-bold mt-2">Active loyalty points</p>
               </div>
-              <TrendingUp className="h-6 w-6 text-purple-600" />
+              <div className="h-12 w-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm">
+                <Star className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -246,16 +275,21 @@ export default function Customers() {
                   </thead>
                   <tbody>
                     {filteredCustomers.map((customer) => (
-                      <tr key={customer.id} className="border-b border-border">
-                        <td className="py-4 px-4 font-medium">{customer.name}</td>
+                      <tr key={customer.id} className="border-b border-sidebar-border/30 hover:bg-emerald-50/30 transition-colors group">
+                        <td className="py-4 px-4 font-bold text-emerald-950">{customer.name}</td>
                         <td className="py-4 px-4">
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">
                             {customer.loyaltyTier}
                           </span>
                         </td>
-                        <td className="py-4 px-4">{customer.phone}</td>
-                        <td className="py-4 px-4">₹{customer.totalSpent.toLocaleString()}</td>
-                        <td className="py-4 px-4">{customer.loyaltyPoints}</td>
+                        <td className="py-4 px-4 font-medium text-muted-foreground">{customer.phone}</td>
+                        <td className="py-4 px-4 font-black text-emerald-900">Rs.{customer.totalSpent.toLocaleString()}</td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-1.5 font-bold text-purple-700">
+                            <Star className="h-3.5 w-3.5 fill-purple-700/20" />
+                            {customer.loyaltyPoints}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

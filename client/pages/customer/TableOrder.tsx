@@ -11,10 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, CheckCircle, ShoppingCart, Trash2 } from "lucide-react";
-import { generateBill, saveBill, BillDetails } from "@/lib/billing";
-import { createOrder, saveOrder } from "@/lib/orders";
+import { AlertCircle, CheckCircle, ShoppingCart, Trash2, Loader2, Leaf, Clock, Star, Users, Sparkles, UtensilsCrossed, ShieldCheck, Zap, Heart, PartyPopper, History } from "lucide-react";
+import { generateBill } from "@/lib/billing";
+import { createOrder as apiCreateOrder } from "@/lib/orders";
+import { getMenuItems, MenuItem } from "@/lib/menu";
+import { getTables } from "@/lib/tables-api";
 import BillDisplay from "@/components/billing/BillDisplay";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface CartItem {
   id: number;
@@ -22,76 +26,6 @@ interface CartItem {
   price: number;
   quantity: number;
 }
-
-interface MenuItem {
-  id: number;
-  name: string;
-  price: number;
-  description: string;
-}
-
-const MENU_ITEMS: MenuItem[] = [
-  {
-    id: 1,
-    name: "Butter Chicken",
-    price: 320,
-    description: "Tender chicken in creamy tomato sauce",
-  },
-  {
-    id: 2,
-    name: "Garlic Naan",
-    price: 60,
-    description: "Soft flatbread with garlic butter",
-  },
-  {
-    id: 3,
-    name: "Biryani",
-    price: 280,
-    description: "Fragrant rice with meat",
-  },
-  {
-    id: 4,
-    name: "Samosa",
-    price: 40,
-    description: "Crispy pastry with filling",
-  },
-  {
-    id: 5,
-    name: "Gulab Jamun",
-    price: 120,
-    description: "Sweet fried dumplings",
-  },
-  {
-    id: 6,
-    name: "Tandoori Chicken",
-    price: 350,
-    description: "Spiced grilled chicken",
-  },
-  {
-    id: 7,
-    name: "Aloo Paratha",
-    price: 80,
-    description: "Potato-filled flatbread",
-  },
-  {
-    id: 8,
-    name: "Masala Chai",
-    price: 30,
-    description: "Spiced tea",
-  },
-  {
-    id: 9,
-    name: "Paneer Tikka",
-    price: 280,
-    description: "Grilled cottage cheese cubes",
-  },
-  {
-    id: 10,
-    name: "Dal Makhani",
-    price: 200,
-    description: "Creamy lentil curry",
-  },
-];
 
 export default function TableOrder() {
   const navigate = useNavigate();
@@ -105,16 +39,27 @@ export default function TableOrder() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("card");
-  const [bill, setBill] = useState<BillDetails | null>(null);
+  const [orderBill, setOrderBill] = useState<any>(null);
   const [orderId] = useState("ORD-" + Date.now().toString().slice(-6));
 
-  // Validate table number
+  const { data: menuItems = [], isLoading: isMenuLoading } = useQuery({
+    queryKey: ["menu"],
+    queryFn: getMenuItems,
+  });
+
+  const { data: tables = [], isLoading: isTablesLoading } = useQuery({
+    queryKey: ["tables"],
+    queryFn: getTables,
+  });
+
+  const activeTable = tables.find(t => t.number === tableNumber);
+
   useEffect(() => {
-    if (!tableNumber) {
-      alert("Invalid table access. Please scan a valid QR code.");
+    if (!tableNumber && !isTablesLoading) {
+      toast.error("Invalid table access. Please scan a valid QR code.");
       navigate("/");
     }
-  }, [tableNumber, navigate]);
+  }, [tableNumber, navigate, isTablesLoading]);
 
   const addToCart = (item: MenuItem) => {
     setCart((prevCart) => {
@@ -124,8 +69,9 @@ export default function TableOrder() {
           i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
-      return [...prevCart, { ...item, quantity: 1 }];
+      return [...prevCart, { id: item.id, name: item.name, price: item.price, quantity: 1 }];
     });
+    toast.success(`${item.name} added to tray`);
   };
 
   const removeFromCart = (itemId: number) => {
@@ -150,20 +96,17 @@ export default function TableOrder() {
 
   const handleCheckout = () => {
     if (!customerName || !customerPhone) {
-      alert("Please enter your name and phone number");
+      toast.error("Please enter your name and phone number");
       return;
     }
     if (cart.length === 0) {
-      alert("Please add items to your order");
+      toast.error("Please add items to your order");
       return;
     }
     setStep("payment");
   };
 
   const handlePayment = () => {
-    if (!tableNumber) return;
-
-    // Generate bill for dine-in order
     const billItems = cart.map((item) => ({
       id: item.id,
       name: item.name,
@@ -177,176 +120,196 @@ export default function TableOrder() {
       customerName,
       customerPhone,
       paymentMethod,
-      0, // discount percent
-      0, // no delivery fee for dine-in
-      undefined, // no PAN for simplicity
-      undefined, // use default restaurant
-      parseInt(tableNumber) // table number for dine-in
+      0, 0, undefined, undefined,
+      activeTable?.id
     );
 
-    setBill(generatedBill);
+    setOrderBill(generatedBill);
     setStep("bill");
   };
 
-  const handleConfirmOrder = () => {
-    if (!bill || !tableNumber) return;
+  const confirmOrderMutation = useMutation({
+    mutationFn: async () => {
+      if (!orderBill || !activeTable) throw new Error("Missing order details");
 
-    // Save bill
-    saveBill(bill);
+      const orderItems = cart.map((item) => ({
+        menuItemId: item.id,
+        quantity: item.quantity,
+        price: item.price,
+      }));
 
-    // Convert cart items to order items
-    const orderItems = cart.map((item) => ({
-      id: item.id,
-      name: item.name,
-      quantity: item.quantity,
-      unitPrice: item.price,
-      amount: item.price * item.quantity,
-    }));
+      // Create Order (Backend handles Table status and Customer creation automatically)
+      const order = await apiCreateOrder({
+        tableId: activeTable.id.toString(),
+        customerName,
+        customerPhone,
+        items: orderItems,
+      } as any);
 
-    // Create dine-in order with table number
-    const order = createOrder(
-      orderId,
-      bill.billNo,
-      customerName,
-      customerPhone,
-      orderItems,
-      bill.subtotal,
-      bill.discountAmount,
-      bill.discountPercent,
-      bill.deliveryFee,
-      bill.vatAmount,
-      bill.totalAmount,
-      paymentMethod,
-      "dine-in", // order type
-      parseInt(tableNumber), // table number
-      undefined, // no delivery address
-      undefined, // no PAN
-      undefined, // no notes
-      bill
+      return order;
+    },
+    onSuccess: () => {
+      setStep("confirmation");
+      toast.success("Order placed successfully!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to place order");
+    }
+  });
+
+  if (isMenuLoading || isTablesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-lg font-medium text-muted-foreground">Opening Menu...</p>
+        </div>
+      </div>
     );
+  }
 
-    saveOrder(order);
-
-    setStep("confirmation");
-  };
-
-  // Menu step
   if (step === "menu") {
     return (
-      <div className="min-h-screen bg-background py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="inline-block px-4 py-2 bg-orange-100 text-orange-800 rounded-lg font-semibold mb-4">
-              Table {tableNumber}
+      <div className="min-h-screen bg-background py-8 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Hero Header */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/10 text-primary rounded-full text-[10px] font-black tracking-[0.2em] mb-6 border border-primary/20 shadow-sm animate-pulse">
+                TABLE {tableNumber} • DINE-IN ARCHITECTURE
+              </div>
+              <h1 className="text-5xl font-black tracking-tighter lg:text-7xl text-sidebar-foreground mb-4">
+                Curated <span className="text-primary italic">Atoms</span>
+              </h1>
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-green-500 text-white shadow-xl scale-110">
+                  <Leaf className="h-7 w-7" />
+                </div>
+                <div>
+                  <p className="text-lg font-black tracking-tight text-emerald-950 flex items-center gap-1">
+                    VENZO<span className="text-primary italic">SMART</span>
+                    <Sparkles className="h-4 w-4 text-amber-400" />
+                  </p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/70 -mt-1 bg-primary/5 px-2 py-0.5 rounded-full inline-block">110% Pure Veg & Eggless</p>
+                </div>
+              </div>
             </div>
-            <h1 className="text-3xl font-bold mb-2">Restaurant Menu</h1>
-            <p className="text-muted-foreground">
-              Select items and place your order
-            </p>
           </div>
 
-          {/* Menu Grid and Cart */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Menu Items */}
-            <div className="lg:col-span-3 space-y-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {MENU_ITEMS.map((item) => (
-                  <Card key={item.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="pt-6">
-                      <h3 className="font-semibold text-lg mb-2">{item.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {item.description}
-                      </p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-orange-600">
-                          ₹{item.price}
-                        </span>
-                        <Button
-                          size="sm"
-                          onClick={() => addToCart(item)}
-                          className="gap-2"
-                        >
-                          <ShoppingCart className="h-4 w-4" />
-                          Add
-                        </Button>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            {/* Menu Sections */}
+            <div className="lg:col-span-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {menuItems.map((item: MenuItem) => (
+                  <Card key={item.id} className="premium-card group relative overflow-hidden border-none shadow-lg hover:shadow-2xl">
+                    <CardContent className="pt-8 text-left">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-black text-2xl group-hover:text-primary transition-colors line-clamp-1 italic text-emerald-950">{item.name}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-primary/5 text-primary rounded-full">Organic</span>
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-amber-500">
+                              <Star className="h-3 w-3 fill-amber-500" />
+                              4.9
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-2xl font-black text-primary tracking-tighter italic">Rs.{item.price}</span>
                       </div>
+                      <p className="text-muted-foreground mb-6 line-clamp-2 text-sm leading-relaxed font-medium">{item.description}</p>
+                      <Button
+                        size="lg"
+                        onClick={() => addToCart(item)}
+                        className="w-full rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all font-black gap-2 h-12"
+                      >
+                        <ShoppingCart className="h-5 w-5" />
+                        ADD TO TRAY
+                      </Button>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             </div>
 
-            {/* Cart Sidebar */}
-            <div>
-              <Card className="sticky top-4">
-                <CardHeader>
-                  <CardTitle>Your Order</CardTitle>
+            {/* Floating Order Tray */}
+            <div className="lg:col-span-4 lg:block">
+              <Card className="sticky top-8 border-2 border-primary/20 shadow-[-20px_20px_60px_-15px_rgba(0,0,0,0.1)] overflow-hidden">
+                <CardHeader className="bg-gradient-to-br from-emerald-700 to-green-600 text-white py-8 border-none relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12 scale-150">
+                    <UtensilsCrossed className="h-24 w-24" />
+                  </div>
+                  <CardTitle className="flex items-center justify-between text-2xl font-black tracking-tighter uppercase relative z-10">
+                    <span>Order Tray</span>
+                    <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-2xl text-lg flex items-center gap-2 shadow-inner">
+                      <ShoppingCart className="h-5 w-5" />
+                      {cart.reduce((a, b) => a + b.quantity, 0)}
+                    </div>
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="pt-6">
                   {cart.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">
-                      No items added
-                    </p>
+                    <div className="text-center py-20 opacity-30">
+                      <ShoppingCart className="h-20 w-20 mx-auto mb-4 stroke-[1.5]" />
+                      <p className="font-medium text-lg">Your tray is empty</p>
+                    </div>
                   ) : (
-                    <>
-                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                    <div className="space-y-6">
+                      <div className="space-y-4 max-h-[45vh] overflow-y-auto pr-2 custom-scrollbar">
                         {cart.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-center justify-between p-2 bg-secondary rounded"
-                          >
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">{item.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                ₹{item.price} x {item.quantity}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) =>
-                                  updateQuantity(item.id, parseInt(e.target.value))
-                                }
-                                className="w-12 h-8"
-                              />
+                          <div key={item.id} className="flex flex-col p-4 bg-secondary/30 rounded-2xl border border-border group">
+                            <div className="flex justify-between items-start mb-3">
+                              <span className="font-bold leading-tight flex-1">{item.name}</span>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-8 w-8 text-destructive/50 hover:text-destructive hover:bg-destructive/10 rounded-full"
                                 onClick={() => removeFromCart(item.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
+                            <div className="flex justify-between items-center mt-auto">
+                              <div className="flex items-center bg-background rounded-full border border-border p-1 shadow-sm">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full"
+                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                >
+                                  -
+                                </Button>
+                                <span className="text-sm font-black w-8 text-center">{item.quantity}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full"
+                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                >
+                                  +
+                                </Button>
+                              </div>
+                              <span className="font-black text-primary">Rs.{item.price * item.quantity}</span>
+                            </div>
                           </div>
                         ))}
                       </div>
-
-                      <div className="space-y-2 pt-4 border-t border-border">
-                        <div className="flex justify-between text-sm">
+                      <div className="pt-6 border-t-2 border-dashed space-y-3">
+                        <div className="flex justify-between text-muted-foreground font-medium">
                           <span>Subtotal</span>
-                          <span>₹{subtotal}</span>
+                          <span>Rs.{subtotal}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span>VAT (13%)</span>
-                          <span>₹{vat}</span>
-                        </div>
-                        <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                        <div className="flex justify-between text-2xl font-black pt-2">
                           <span>Total</span>
-                          <span>₹{total}</span>
+                          <span className="text-primary">Rs.{total}</span>
                         </div>
+                        <Button
+                          className="w-full mt-6 h-14 text-xl font-bold shadow-2xl rounded-2xl hover:translate-y-[-2px] transition-transform"
+                          onClick={() => setStep("checkout")}
+                        >
+                          Checkout Now
+                        </Button>
                       </div>
-
-                      <Button
-                        className="w-full"
-                        size="lg"
-                        onClick={() => setStep("checkout")}
-                      >
-                        Proceed to Checkout
-                      </Button>
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -357,178 +320,94 @@ export default function TableOrder() {
     );
   }
 
-  // Checkout step
   if (step === "checkout") {
     return (
-      <div className="min-h-screen bg-background py-8 px-4">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">Your Details</h1>
-
-          <Card>
-            <CardContent className="pt-6 space-y-6">
-              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                <p className="font-semibold text-orange-900">
-                  Table {tableNumber}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <Card className="w-full max-w-lg shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border-none bg-secondary/10">
+          <CardHeader className="text-center py-12">
+            <div className="mx-auto bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center mb-6">
+              <Users className="h-10 w-10 text-primary" />
+            </div>
+            <CardTitle className="text-4xl font-black tracking-tight">One Last Step</CardTitle>
+            <p className="text-muted-foreground mt-2 text-lg">Who should we prepare this order for?</p>
+          </CardHeader>
+          <CardContent className="px-10 pb-12 space-y-8">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Label className="text-lg font-bold">Your Name</Label>
                 <Input
-                  id="name"
-                  placeholder="Your name"
+                  placeholder="e.g. John Smith"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
+                  className="h-14 text-lg rounded-2xl border-2 focus-visible:border-primary transition-all px-6"
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
+              <div className="space-y-3">
+                <Label className="text-lg font-bold">Phone Number</Label>
                 <Input
-                  id="phone"
-                  placeholder="Your phone number"
+                  placeholder="For order updates"
+                  type="tel"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  type="tel"
+                  className="h-14 text-lg rounded-2xl border-2 focus-visible:border-primary transition-all px-6"
                 />
               </div>
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setStep("menu")}
-                  size="lg"
-                >
-                  Back
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={handleCheckout}
-                  size="lg"
-                >
-                  Continue to Payment
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {cart.map((item) => (
-                <div key={item.id} className="flex justify-between">
-                  <span>{item.name} x{item.quantity}</span>
-                  <span>₹{item.price * item.quantity}</span>
-                </div>
-              ))}
-              <div className="border-t pt-3 space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>₹{subtotal}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>VAT (13%)</span>
-                  <span>₹{vat}</span>
-                </div>
-                <div className="flex justify-between font-bold text-lg">
-                  <span>Total</span>
-                  <span>₹{total}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            <div className="flex gap-4 pt-4">
+              <Button variant="ghost" className="flex-1 h-14 text-lg font-bold rounded-2xl" onClick={() => setStep("menu")}>Back to Menu</Button>
+              <Button className="flex-2 h-14 text-lg font-bold rounded-2xl shadow-xl px-12" onClick={handleCheckout}>Continue</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  // Payment step
   if (step === "payment") {
     return (
-      <div className="min-h-screen bg-background py-8 px-4">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">Payment Method</h1>
-
-          <Card>
-            <CardContent className="pt-6 space-y-6">
-              <div className="space-y-3">
-                {["card", "upi", "cash"].map((method) => (
-                  <label
-                    key={method}
-                    className="flex items-center gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors"
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value={method}
-                      checked={paymentMethod === method}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="h-4 w-4"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium capitalize">
-                        {method === "card"
-                          ? "Credit/Debit Card"
-                          : method === "upi"
-                            ? "UPI"
-                            : "Cash at Table"}
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setStep("checkout")}
-                  size="lg"
-                >
-                  Back
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={handlePayment}
-                  size="lg"
-                >
-                  Review Bill
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <Card className="w-full max-w-lg shadow-2xl border-none">
+          <CardHeader className="text-center py-10 bg-primary/5">
+            <CardTitle className="text-3xl font-black">Payment Selection</CardTitle>
+          </CardHeader>
+          <CardContent className="p-10 space-y-4">
+            {["card", "upi", "cash"].map((method) => (
+              <Button
+                key={method}
+                variant={paymentMethod === method ? "default" : "outline"}
+                className={`w-full h-20 justify-between text-xl capitalize font-bold rounded-2xl border-2 transition-all ${paymentMethod === method ? 'border-primary ring-4 ring-primary/10' : 'hover:bg-secondary'}`}
+                onClick={() => setPaymentMethod(method)}
+              >
+                <span>{method}</span>
+                {paymentMethod === method && <CheckCircle className="h-6 w-6" />}
+              </Button>
+            ))}
+            <div className="flex gap-4 pt-8">
+              <Button variant="ghost" className="flex-1 h-14 text-lg font-bold rounded-2xl" onClick={() => setStep("checkout")}>Back</Button>
+              <Button className="flex-2 h-14 text-lg font-bold rounded-2xl" onClick={handlePayment}>Review Order</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  // Bill step
-  if (step === "bill" && bill) {
+  if (step === "bill" && orderBill) {
     return (
-      <div className="min-h-screen bg-background py-8 px-4">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">Order Bill</h1>
-
-          <BillDisplay bill={bill} showActions={true} />
-
-          <div className="flex gap-3 mt-6">
+      <div className="min-h-screen bg-background py-12 px-6 flex items-center justify-center">
+        <div className="w-full max-w-2xl">
+          <h2 className="text-4xl font-black text-center mb-10">Final <span className="text-primary">Check</span></h2>
+          <div className="shadow-[-20px_20px_60px_-15px_rgba(0,0,0,0.1)] rounded-3xl overflow-hidden">
+            <BillDisplay bill={orderBill} showActions={false} />
+          </div>
+          <div className="flex flex-col md:flex-row gap-4 mt-10">
+            <Button variant="ghost" className="flex-1 h-16 text-lg font-bold rounded-2xl uppercase tracking-wider" onClick={() => setStep("payment")}>Edit Payment</Button>
             <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => setStep("payment")}
-              size="lg"
+              className="flex-2 h-16 text-xl font-black shadow-2xl rounded-2xl bg-green-600 hover:bg-green-700 uppercase tracking-widest transition-all hover:scale-[1.02]"
+              onClick={() => confirmOrderMutation.mutate()}
+              disabled={confirmOrderMutation.isPending}
             >
-              Back
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={handleConfirmOrder}
-              size="lg"
-            >
-              Confirm Order
+              {confirmOrderMutation.isPending ? <Loader2 className="animate-spin h-6 w-6" /> : "Confirm Order"}
             </Button>
           </div>
         </div>
@@ -536,62 +415,35 @@ export default function TableOrder() {
     );
   }
 
-  // Confirmation step
   if (step === "confirmation") {
     return (
-      <div className="min-h-screen bg-background py-12 px-4">
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardContent className="pt-12 text-center">
-              <div className="mb-6 flex justify-center">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-green-200 rounded-full blur-lg"></div>
-                  <CheckCircle className="h-24 w-24 text-green-600 relative" />
-                </div>
-              </div>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,rgba(34,197,94,0.05),transparent)]">
+        <div className="text-center max-w-lg animate-in fade-in zoom-in duration-700">
+          <div className="relative inline-block mb-10">
+            <div className="absolute inset-0 bg-green-500/20 rounded-full blur-3xl animate-pulse" />
+            <CheckCircle className="h-40 w-40 text-green-500 relative drop-shadow-[0_10px_25px_rgba(34,197,94,0.3)]" />
+          </div>
+          <h1 className="text-6xl font-black mb-4 tracking-tighter italic">Cooking!</h1>
+          <p className="text-2xl text-muted-foreground mb-12 font-medium">Your request has hit the kitchen. Stay comfortable!</p>
 
-              <h1 className="text-2xl font-bold mb-2">Order Confirmed!</h1>
-              <p className="text-muted-foreground mb-6">
-                Your order has been placed successfully
-              </p>
+          <div className="grid grid-cols-2 gap-4 mb-12">
+            <div className="bg-secondary/40 backdrop-blur-sm rounded-3xl p-6 border text-left">
+              <p className="text-xs uppercase font-black opacity-30 mb-1">Receipt ID</p>
+              <p className="text-xl font-mono font-black">{orderId}</p>
+            </div>
+            <div className="bg-secondary/40 backdrop-blur-sm rounded-3xl p-6 border text-left">
+              <p className="text-xs uppercase font-black opacity-30 mb-1">Your Spot</p>
+              <p className="text-xl font-black">Table {tableNumber}</p>
+            </div>
+          </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-secondary rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Order ID</p>
-                  <p className="text-lg font-bold">{orderId}</p>
-                </div>
-                <div className="bg-secondary rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Table</p>
-                  <p className="text-lg font-bold">{tableNumber}</p>
-                </div>
-              </div>
-
-              <div className="space-y-3 mb-6">
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900">
-                    Estimated Preparation Time
-                  </p>
-                  <p className="text-sm text-blue-800 mt-1">15-20 minutes</p>
-                </div>
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm font-medium text-green-900">
-                    Order Total
-                  </p>
-                  <p className="text-lg font-bold text-green-800">₹{bill?.totalAmount.toFixed(2)}</p>
-                </div>
-              </div>
-
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={() => navigate("/")}
-              >
-                Done
-              </Button>
-            </CardContent>
-          </Card>
-
-          {bill && <BillDisplay bill={bill} showActions={true} />}
+          <Button
+            size="lg"
+            onClick={() => navigate("/")}
+            className="w-full h-16 text-xl font-bold rounded-2xl shadow-xl hover:scale-105 transition-transform"
+          >
+            Explore More Delights
+          </Button>
         </div>
       </div>
     );

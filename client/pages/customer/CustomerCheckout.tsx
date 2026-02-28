@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, MapPin, CreditCard, CheckCircle } from "lucide-react";
+import { AlertCircle, MapPin, CreditCard, CheckCircle, Leaf, Clock, Sparkles, ShieldCheck, Truck, Receipt, ArrowRight, ArrowLeft, ShoppingCart } from "lucide-react";
 import { generateBill, saveBill, BillDetails } from "@/lib/billing";
 import { createOrder, saveOrder } from "@/lib/orders";
 import BillDisplay from "@/components/billing/BillDisplay";
@@ -28,9 +28,7 @@ export default function CustomerCheckout() {
   const [cart] = useState<CartItem[]>(
     JSON.parse(localStorage.getItem("cart_items") || "[]")
   );
-  const [step, setStep] = useState<"address" | "payment" | "bill" | "confirmation">(
-    "address"
-  );
+  const [step, setStep] = useState<string>("address");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -89,26 +87,26 @@ export default function CustomerCheckout() {
       }));
 
       // Create and save order using order management system
-      const order = createOrder(
-        orderId,
-        bill.billNo,
-        customerName,
-        phone,
-        orderItems,
-        bill.subtotal,
-        bill.discountAmount,
-        bill.discountPercent,
-        bill.deliveryFee,
-        bill.vatAmount,
-        bill.totalAmount,
-        paymentMethod,
-        "delivery", // order type
-        undefined, // no table for delivery
-        address,
-        customerPan || undefined,
-        undefined, // no notes
-        bill // include full bill details
-      );
+      const orderData = {
+        orderNumber: orderId,
+        billNo: bill.billNo,
+        customerName: customerName,
+        phone: phone,
+        orderItems: orderItems,
+        subtotal: bill.subtotal,
+        discountAmount: bill.discountAmount,
+        discountPercent: bill.discountPercent,
+        deliveryFee: bill.deliveryFee,
+        taxAmount: bill.vatAmount,
+        totalAmount: bill.totalAmount,
+        paymentMethod: paymentMethod,
+        orderType: "DELIVERY",
+        address: address,
+        customerPan: customerPan || undefined,
+        bill: bill
+      };
+
+      const order = createOrder(orderData);
 
       saveOrder(order);
 
@@ -126,46 +124,52 @@ export default function CustomerCheckout() {
     return (
       <div className="min-h-screen bg-background py-12 px-4">
         <div className="max-w-2xl mx-auto">
-          <Card className="mb-6">
+          <Card className="premium-card mb-6 shadow-2xl border-none overflow-hidden">
             <CardContent className="pt-12 text-center">
-              <div className="mb-6 flex justify-center">
+              <div className="mb-8 flex justify-center">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-accent/20 rounded-full blur-lg"></div>
-                  <CheckCircle className="h-24 w-24 text-accent relative" />
+                  <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-2xl animate-pulse"></div>
+                  <div className="relative flex h-24 w-24 items-center justify-center rounded-[2rem] bg-gradient-to-br from-emerald-600 to-green-500 text-white shadow-xl">
+                    <CheckCircle className="h-12 w-12" />
+                  </div>
                 </div>
               </div>
 
-              <h1 className="text-2xl font-bold mb-2">Order Confirmed!</h1>
-              <p className="text-muted-foreground mb-6">
-                Your order has been placed successfully
+              <h1 className="text-3xl font-extrabold tracking-tighter mb-2">Order Confirmed!</h1>
+              <p className="text-muted-foreground mb-8 font-medium">
+                Your organic meal is being prepared with love
               </p>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-secondary rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Order ID</p>
-                  <p className="text-lg font-bold">{orderId}</p>
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100/50 text-left">
+                  <p className="text-[10px] uppercase font-bold text-emerald-900/40 mb-1">Order Tracking</p>
+                  <p className="text-lg font-bold text-emerald-900">{orderId}</p>
                 </div>
                 {bill && (
-                  <div className="bg-secondary rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground">Bill No</p>
-                    <p className="text-lg font-bold">{bill.billNo}</p>
+                  <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100/50 text-left">
+                    <p className="text-[10px] uppercase font-bold text-emerald-900/40 mb-1">Receipt Number</p>
+                    <p className="text-lg font-bold text-emerald-900">{bill.billNo}</p>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-3 mb-6 text-left">
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900">
-                    Estimated Delivery
-                  </p>
-                  <p className="text-sm text-blue-800 mt-1">30-45 minutes</p>
+              <div className="space-y-3 mb-8 text-left">
+                <div className="p-4 bg-white rounded-2xl border border-emerald-50 shadow-sm flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-emerald-900">Estimated Delivery</p>
+                    <p className="text-xs text-emerald-700/60 font-medium">30-45 minutes • Freshly Packed</p>
+                  </div>
                 </div>
                 {bill && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm font-medium text-green-900">
-                      Order Total
-                    </p>
-                    <p className="text-lg font-bold text-green-800">₹{bill.totalAmount.toFixed(2)}</p>
+                  <div className="p-4 bg-emerald-600 rounded-2xl shadow-lg flex items-center justify-between text-white">
+                    <div className="flex items-center gap-3">
+                      <Leaf className="h-5 w-5 opacity-80" />
+                      <p className="text-sm font-bold">Total Amount Paid</p>
+                    </div>
+                    <p className="text-xl font-black">Rs.{bill.totalAmount.toFixed(2)}</p>
                   </div>
                 )}
               </div>
@@ -200,24 +204,41 @@ export default function CustomerCheckout() {
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="bg-primary/10 p-1.5 rounded-lg">
+                <Leaf className="h-4 w-4 text-primary" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+                VenzoSmart • Secure Gateway
+              </span>
+            </div>
+            <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+              Manifest <span className="text-primary italic">Order</span>
+            </h1>
+            <p className="text-muted-foreground mt-1 font-medium italic">
+              "110% Pure Veg & Eggless • Freshly Cultivated"
+            </p>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left - Form */}
           <div className="lg:col-span-2 space-y-6">
             {/* Customer Info Step */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="premium-card border-none shadow-2xl overflow-hidden group">
+              <CardHeader className="bg-emerald-50/30 border-b border-emerald-900/5">
+                <CardTitle className="flex items-center gap-2 text-emerald-900 font-extrabold">
                   {step !== "address" ? (
-                    <CheckCircle className="h-5 w-5 text-accent" />
+                    <ShieldCheck className="h-5 w-5 text-primary" />
                   ) : (
-                    <MapPin className="h-5 w-5" />
+                    <MapPin className="h-5 w-5 text-primary" />
                   )}
-                  Customer Information
+                  I. RECIPIENT LOGISTICS
                 </CardTitle>
               </CardHeader>
-              {step !== "confirmation" && (
+              {step !== "bill" && step !== "confirmation" && (
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name *</Label>
@@ -271,18 +292,16 @@ export default function CustomerCheckout() {
                     />
                   </div>
 
-                  {step === "address" && (
-                    <Button
-                      className="w-full"
-                      onClick={handlePlaceOrder}
-                      size="lg"
-                    >
-                      Continue to Payment
-                    </Button>
-                  )}
+                  <Button
+                    className="w-full h-14 rounded-2xl text-lg font-black transition-all hover:scale-[1.02] shadow-xl shadow-primary/20 bg-primary text-white gap-3"
+                    onClick={handlePlaceOrder}
+                  >
+                    CONTINUE TO FINANCIALS
+                    <ArrowRight className="h-5 w-5" />
+                  </Button>
                 </CardContent>
               )}
-              {step !== "address" && (
+              {(step === "payment" || step === "bill") && (
                 <CardContent className="space-y-2 text-sm">
                   <p className="font-medium">{customerName}</p>
                   <p className="text-muted-foreground">{phone}</p>
@@ -293,15 +312,15 @@ export default function CustomerCheckout() {
 
             {/* Payment Step */}
             {step !== "bill" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {step === "confirmation" || step === "bill" ? (
-                      <CheckCircle className="h-5 w-5 text-accent" />
+              <Card className="premium-card border-none shadow-2xl overflow-hidden group">
+                <CardHeader className="bg-emerald-50/30 border-b border-emerald-900/5">
+                  <CardTitle className="flex items-center gap-2 text-emerald-900 font-extrabold">
+                    {step === "bill" ? (
+                      <ShieldCheck className="h-5 w-5 text-primary" />
                     ) : (
-                      <CreditCard className="h-5 w-5" />
+                      <CreditCard className="h-5 w-5 text-primary" />
                     )}
-                    Payment Method
+                    II. PAYMENT ARCHITECTURE
                   </CardTitle>
                 </CardHeader>
                 {step === "payment" && (
@@ -310,7 +329,7 @@ export default function CustomerCheckout() {
                       {["card", "upi", "wallet", "cod"].map((method) => (
                         <label
                           key={method}
-                          className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors"
+                          className="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer hover:bg-emerald-50 transition-colors"
                         >
                           <input
                             type="radio"
@@ -318,10 +337,10 @@ export default function CustomerCheckout() {
                             value={method}
                             checked={paymentMethod === method}
                             onChange={(e) => setPaymentMethod(e.target.value)}
-                            className="h-4 w-4"
+                            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500"
                           />
                           <div className="flex-1">
-                            <p className="font-medium capitalize">
+                            <p className="font-bold capitalize text-emerald-900">
                               {method === "card"
                                 ? "Credit/Debit Card"
                                 : method === "upi"
@@ -331,7 +350,7 @@ export default function CustomerCheckout() {
                                     : "Cash on Delivery"}
                             </p>
                             {method === "cod" && (
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-[10px] text-emerald-600/60 font-medium">
                                 Pay when order arrives
                               </p>
                             )}
@@ -341,36 +360,21 @@ export default function CustomerCheckout() {
                     </div>
 
                     {paymentMethod !== "cod" && (
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex gap-3">
                         <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-blue-900">
-                          Demo mode: Payment will be simulated. Use any card details
-                          for testing.
+                        <p className="text-xs text-blue-900 font-medium">
+                          Demo mode: Payment will be simulated.
                         </p>
                       </div>
                     )}
 
                     <Button
-                      className="w-full"
+                      className="w-full h-14 rounded-2xl text-lg font-black transition-all hover:scale-[1.02] shadow-xl shadow-primary/20 bg-primary text-white gap-3"
                       onClick={handlePayment}
-                      size="lg"
                     >
-                      Review Bill
+                      GENERATE PROXIMAL BILL
+                      <Receipt className="h-5 w-5" />
                     </Button>
-                  </CardContent>
-                )}
-                {(step === "confirmation" || step === "bill") && (
-                  <CardContent className="space-y-2 text-sm">
-                    <p className="font-medium capitalize">
-                      {paymentMethod === "card"
-                        ? "Credit Card"
-                        : paymentMethod === "upi"
-                          ? "UPI"
-                          : paymentMethod === "wallet"
-                            ? "Wallet"
-                            : "Cash on Delivery"}
-                    </p>
-                    <p className="text-muted-foreground">Payment processed</p>
                   </CardContent>
                 )}
               </Card>
@@ -380,21 +384,23 @@ export default function CustomerCheckout() {
             {step === "bill" && bill && (
               <>
                 <BillDisplay bill={bill} showActions={true} />
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 h-14 rounded-2xl font-black border-2 border-emerald-100/50 text-emerald-900 gap-2"
                     onClick={() => setStep("payment")}
                     size="lg"
                   >
-                    Back
+                    <ArrowLeft className="h-5 w-5" />
+                    PREVIOUS
                   </Button>
                   <Button
-                    className="flex-1"
+                    className="flex-2 h-14 rounded-2xl font-black bg-primary text-white shadow-xl shadow-primary/20 transition-all hover:scale-[1.05] gap-3"
                     onClick={handleConfirmOrder}
                     size="lg"
                   >
-                    Confirm & Place Order
+                    AUTHORIZE & DISPATCH
+                    <Truck className="h-5 w-5 text-white/50" />
                   </Button>
                 </div>
               </>
@@ -403,10 +409,13 @@ export default function CustomerCheckout() {
 
           {/* Right - Order Summary */}
           {step !== "bill" && (
-            <div>
-              <Card className="sticky top-4">
-                <CardHeader>
-                  <CardTitle>Order Summary</CardTitle>
+            <div className="lg:col-span-1">
+              <Card className="premium-card border-none shadow-2xl sticky top-24 overflow-hidden">
+                <CardHeader className="bg-emerald-50/30 border-b border-emerald-900/5">
+                  <CardTitle className="text-emerald-900 font-extrabold flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5 text-primary" />
+                    BASKET INTEL
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -419,7 +428,7 @@ export default function CustomerCheckout() {
                           {item.name} x{item.quantity}
                         </span>
                         <span className="font-medium">
-                          ₹{item.price * item.quantity}
+                          Rs.{item.price * item.quantity}
                         </span>
                       </div>
                     ))}
@@ -428,21 +437,21 @@ export default function CustomerCheckout() {
                   <div className="space-y-2 pt-4 border-t border-border">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>₹{subtotal.toFixed(2)}</span>
+                      <span>Rs.{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">VAT (13%)</span>
-                      <span>₹{Math.round(subtotal * 0.13).toFixed(2)}</span>
+                      <span>Rs.{Math.round(subtotal * 0.13).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Delivery</span>
-                      <span>₹{deliveryFee.toFixed(2)}</span>
+                      <span>Rs.{deliveryFee.toFixed(2)}</span>
                     </div>
                   </div>
 
                   <div className="flex justify-between font-bold text-lg pt-4 border-t border-border">
                     <span>Total</span>
-                    <span className="text-primary">₹{(subtotal + Math.round(subtotal * 0.13) + deliveryFee).toFixed(2)}</span>
+                    <span className="text-primary">Rs.{(subtotal + Math.round(subtotal * 0.13) + deliveryFee).toFixed(2)}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -450,6 +459,6 @@ export default function CustomerCheckout() {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 }

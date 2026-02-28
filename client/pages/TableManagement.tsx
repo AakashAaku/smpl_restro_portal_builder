@@ -1,4 +1,13 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getTables,
+  createTable,
+  updateTable,
+  deleteTable,
+  updateTableStatus,
+  Table
+} from "@/lib/tables-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -26,93 +35,19 @@ import {
   Edit2,
   Trash2,
   Phone,
+  Loader2,
+  Leaf,
+  Sparkles,
+  LayoutGrid,
+  MapPin,
+  CalendarCheck
 } from "lucide-react";
+import { toast } from "sonner";
 
-interface Table {
-  id: number;
-  number: string;
-  capacity: number;
-  status: "available" | "occupied" | "reserved" | "cleaning";
-  customerName?: string;
-  customerPhone?: string;
-  partySize?: number;
-  checkedInTime?: string;
-  estimatedEndTime?: string;
-  notes?: string;
-}
-
-const mockTables: Table[] = [
-  {
-    id: 1,
-    number: "A1",
-    capacity: 2,
-    status: "occupied",
-    customerName: "Rajesh Kumar",
-    customerPhone: "9841234567",
-    partySize: 2,
-    checkedInTime: "12:30",
-    estimatedEndTime: "13:30",
-  },
-  {
-    id: 2,
-    number: "A2",
-    capacity: 2,
-    status: "occupied",
-    customerName: "Priya Sharma",
-    customerPhone: "9845678901",
-    partySize: 1,
-    checkedInTime: "12:45",
-    estimatedEndTime: "13:45",
-  },
-  {
-    id: 3,
-    number: "A3",
-    capacity: 4,
-    status: "available",
-  },
-  {
-    id: 4,
-    number: "B1",
-    capacity: 4,
-    status: "reserved",
-    customerName: "Amit Patel",
-    customerPhone: "9834567890",
-    partySize: 4,
-    estimatedEndTime: "14:00",
-    notes: "Birthday celebration",
-  },
-  {
-    id: 5,
-    number: "B2",
-    capacity: 6,
-    status: "available",
-  },
-  {
-    id: 6,
-    number: "B3",
-    capacity: 6,
-    status: "occupied",
-    customerName: "Group Meeting",
-    partySize: 5,
-    checkedInTime: "13:00",
-    estimatedEndTime: "14:30",
-  },
-  {
-    id: 7,
-    number: "C1",
-    capacity: 8,
-    status: "cleaning",
-  },
-  {
-    id: 8,
-    number: "C2",
-    capacity: 8,
-    status: "available",
-  },
-];
+// Table interface is now imported from tables-api
 
 export default function TableManagement() {
-  const [tables, setTables] = useState<Table[]>(mockTables);
+  const queryClient = useQueryClient();
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [editingTable, setEditingTable] = useState<Table | null>(null);
   const [showDialog, setShowDialog] = useState(false);
@@ -124,6 +59,50 @@ export default function TableManagement() {
     customerPhone: "",
     partySize: "",
     notes: "",
+  });
+  // Queries
+  const { data: tables = [], isLoading } = useQuery({
+    queryKey: ["tables"],
+    queryFn: getTables,
+  });
+
+  // Mutations
+  const createMutation = useMutation({
+    mutationFn: createTable,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      toast.success("Table created successfully");
+      setShowDialog(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create table");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Table> }) => updateTable(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      toast.success("Table updated successfully");
+      setShowDialog(false);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteTable,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      toast.success("Table deleted successfully");
+      setSelectedTable(null);
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) => updateTableStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tables"] });
+      toast.success("Table status updated");
+    },
   });
 
   const availableCount = tables.filter((t) => t.status === "available").length;
@@ -160,67 +139,52 @@ export default function TableManagement() {
 
   const handleSaveTable = () => {
     if (!formData.number.trim()) {
-      alert("Please enter table number");
+      toast.error("Please enter table number");
       return;
     }
 
-    if (editingTable) {
-      setTables(
-        tables.map((t) =>
-          t.id === editingTable.id
-            ? {
-                ...t,
-                number: formData.number,
-                capacity: parseInt(formData.capacity),
-                customerName: formData.customerName,
-                customerPhone: formData.customerPhone,
-                partySize: formData.partySize ? parseInt(formData.partySize) : undefined,
-                notes: formData.notes,
-              }
-            : t
-        )
-      );
-    } else {
-      const newTable: Table = {
-        id: Math.max(...tables.map((t) => t.id), 0) + 1,
-        number: formData.number,
-        capacity: parseInt(formData.capacity),
-        status: "available",
-        customerName: formData.customerName || undefined,
-        customerPhone: formData.customerPhone || undefined,
-        partySize: formData.partySize ? parseInt(formData.partySize) : undefined,
-        notes: formData.notes || undefined,
-      };
-      setTables([...tables, newTable]);
-    }
+    const tableData = {
+      number: formData.number,
+      capacity: parseInt(formData.capacity),
+      customerName: formData.customerName,
+      customerPhone: formData.customerPhone,
+      partySize: formData.partySize ? parseInt(formData.partySize) : undefined,
+      notes: formData.notes,
+    };
 
-    setShowDialog(false);
+    if (editingTable) {
+      updateMutation.mutate({
+        id: editingTable.id,
+        data: tableData,
+      });
+    } else {
+      createMutation.mutate(tableData);
+    }
   };
 
   const handleDeleteTable = (id: number) => {
     if (confirm("Are you sure you want to delete this table?")) {
-      setTables(tables.filter((t) => t.id !== id));
+      deleteMutation.mutate(id);
     }
   };
 
   const handleStatusChange = (id: number, newStatus: string) => {
-    setTables(
-      tables.map((t) =>
-        t.id === id ? { ...t, status: newStatus as any } : t
-      )
-    );
+    statusMutation.mutate({ id, status: newStatus });
+    if (selectedTable && selectedTable.id === id) {
+      setSelectedTable({ ...selectedTable, status: newStatus as any });
+    }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "available":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100";
+        return "bg-emerald-100 text-emerald-800 border-emerald-200";
       case "occupied":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
+        return "bg-blue-100 text-blue-800 border-blue-200";
       case "reserved":
-        return "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100";
+        return "bg-amber-100 text-amber-800 border-amber-200";
       case "cleaning":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100";
+        return "bg-purple-100 text-purple-800 border-purple-200";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -243,342 +207,359 @@ export default function TableManagement() {
 
   return (
     <div className="space-y-8">
-        {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold">Table Management</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage dining tables and reservations
-            </p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Leaf className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+              VenzoSmart • Floor Management
+            </span>
           </div>
-          <Dialog open={showDialog} onOpenChange={setShowDialog}>
-            <DialogTrigger asChild>
-              <Button onClick={handleAddTable} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Table
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingTable ? "Edit Table" : "Add New Table"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            Table <span className="text-primary italic">Architecture</span>
+          </h1>
+          <p className="text-muted-foreground mt-1 font-medium italic">
+            "Optimizing the Organic Dining Experience"
+          </p>
+        </div>
+        <Dialog open={showDialog} onOpenChange={setShowDialog}>
+          <DialogTrigger asChild>
+            <Button onClick={handleAddTable} className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
+              <Plus className="h-5 w-5" />
+              CONSTRUCT NEW TABLE
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingTable ? "Edit Table" : "Add New Table"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="number">Table Number</Label>
+                  <Input
+                    id="number"
+                    placeholder="e.g., A1, B2"
+                    value={formData.number}
+                    onChange={(e) =>
+                      setFormData({ ...formData, number: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="capacity">Capacity</Label>
+                  <Select
+                    value={formData.capacity}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, capacity: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">2 Persons</SelectItem>
+                      <SelectItem value="4">4 Persons</SelectItem>
+                      <SelectItem value="6">6 Persons</SelectItem>
+                      <SelectItem value="8">8 Persons</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {editingTable?.status === "occupied" ||
+                editingTable?.status === "reserved" ? (
+                <>
                   <div className="space-y-2">
-                    <Label htmlFor="number">Table Number</Label>
+                    <Label htmlFor="customerName">Customer Name</Label>
                     <Input
-                      id="number"
-                      placeholder="e.g., A1, B2"
-                      value={formData.number}
+                      id="customerName"
+                      placeholder="Customer name"
+                      value={formData.customerName}
                       onChange={(e) =>
-                        setFormData({ ...formData, number: e.target.value })
+                        setFormData({
+                          ...formData,
+                          customerName: e.target.value,
+                        })
                       }
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="capacity">Capacity</Label>
-                    <Select
-                      value={formData.capacity}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, capacity: value })
+                    <Label htmlFor="customerPhone">Customer Phone</Label>
+                    <Input
+                      id="customerPhone"
+                      placeholder="Phone number"
+                      value={formData.customerPhone}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          customerPhone: e.target.value,
+                        })
                       }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2">2 Persons</SelectItem>
-                        <SelectItem value="4">4 Persons</SelectItem>
-                        <SelectItem value="6">6 Persons</SelectItem>
-                        <SelectItem value="8">8 Persons</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    />
                   </div>
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="partySize">Party Size</Label>
+                    <Input
+                      id="partySize"
+                      type="number"
+                      placeholder="Number of persons"
+                      value={formData.partySize}
+                      onChange={(e) =>
+                        setFormData({ ...formData, partySize: e.target.value })
+                      }
+                    />
+                  </div>
+                </>
+              ) : null}
 
-                {editingTable?.status === "occupied" ||
-                editingTable?.status === "reserved" ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="customerName">Customer Name</Label>
-                      <Input
-                        id="customerName"
-                        placeholder="Customer name"
-                        value={formData.customerName}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            customerName: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="customerPhone">Customer Phone</Label>
-                      <Input
-                        id="customerPhone"
-                        placeholder="Phone number"
-                        value={formData.customerPhone}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            customerPhone: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="partySize">Party Size</Label>
-                      <Input
-                        id="partySize"
-                        type="number"
-                        placeholder="Number of persons"
-                        value={formData.partySize}
-                        onChange={(e) =>
-                          setFormData({ ...formData, partySize: e.target.value })
-                        }
-                      />
-                    </div>
-                  </>
-                ) : null}
-
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Input
-                    id="notes"
-                    placeholder="Special requests, allergies, etc."
-                    value={formData.notes}
-                    onChange={(e) =>
-                      setFormData({ ...formData, notes: e.target.value })
-                    }
-                  />
-                </div>
-
-                <Button onClick={handleSaveTable} className="w-full">
-                  {editingTable ? "Update Table" : "Add Table"}
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Input
+                  id="notes"
+                  placeholder="Special requests, allergies, etc."
+                  value={formData.notes}
+                  onChange={(e) =>
+                    setFormData({ ...formData, notes: e.target.value })
+                  }
+                />
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
 
-        {/* Key Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Available</p>
-                  <p className="text-2xl font-bold">{availableCount}</p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-500 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Occupied</p>
-                  <p className="text-2xl font-bold">{occupiedCount}</p>
-                </div>
-                <Users className="h-8 w-8 text-blue-500 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Reserved</p>
-                  <p className="text-2xl font-bold">{reservedCount}</p>
-                </div>
-                <Clock className="h-8 w-8 text-amber-500 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Cleaning</p>
-                  <p className="text-2xl font-bold">{cleaningCount}</p>
-                </div>
-                <AlertCircle className="h-8 w-8 text-purple-500 opacity-20" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Table View */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Restaurant Tables Layout</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Total Capacity: {totalCapacity} seats
-              </p>
+              <Button onClick={handleSaveTable} className="w-full">
+                {editingTable ? "Update Table" : "Add Table"}
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {tables.map((table) => (
-                <div
-                  key={table.id}
-                  onClick={() => setSelectedTable(table)}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedTable?.id === table.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <div className="text-center mb-2">
-                    <p className="text-xl font-bold">{table.number}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Capacity: {table.capacity}
-                    </p>
-                  </div>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-                  <div className={`rounded-full py-1 px-2 text-center text-xs font-medium flex items-center justify-center gap-1 ${getStatusColor(table.status)}`}>
-                    {getStatusIcon(table.status)}
-                    <span className="capitalize">{table.status}</span>
-                  </div>
-
-                  {table.status === "occupied" && (
-                    <div className="mt-3 text-xs space-y-1">
-                      <p className="font-medium truncate">{table.customerName}</p>
-                      <p className="text-muted-foreground">
-                        {table.partySize} guest{table.partySize !== 1 ? "s" : ""}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
+      {/* Key Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Available</p>
+                <p className="text-3xl font-black tracking-tight text-emerald-600">{availableCount}</p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <CheckCircle className="h-5 w-5" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Table Details */}
-        {selectedTable && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Table {selectedTable.number} Details</CardTitle>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEditTable(selectedTable)}
-                  className="gap-2"
-                >
-                  <Edit2 className="h-4 w-4" />
-                  Edit
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    handleDeleteTable(selectedTable.id);
-                    setSelectedTable(null);
-                  }}
-                  className="gap-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </Button>
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Occupied</p>
+                <p className="text-3xl font-black tracking-tight text-blue-600">{occupiedCount}</p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Capacity</p>
-                  <p className="text-lg font-bold">{selectedTable.capacity}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <p className={`text-lg font-bold capitalize`}>
-                    {selectedTable.status}
+              <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                <Users className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Booked</p>
+                <p className="text-3xl font-black tracking-tight text-amber-600">{reservedCount}</p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                <Clock className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Sanitizing</p>
+                <p className="text-3xl font-black tracking-tight text-purple-600">{cleaningCount}</p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Table View */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Restaurant Tables Layout</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Total Capacity: {totalCapacity} seats
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {tables.map((table) => (
+              <div
+                key={table.id}
+                onClick={() => setSelectedTable(table)}
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selectedTable?.id === table.id
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
+                  }`}
+              >
+                <div className="text-center mb-2">
+                  <p className="text-xl font-bold">{table.number}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Capacity: {table.capacity}
                   </p>
                 </div>
-                {selectedTable.partySize && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Party Size</p>
-                    <p className="text-lg font-bold">{selectedTable.partySize}</p>
-                  </div>
-                )}
-                {selectedTable.checkedInTime && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Checked In</p>
-                    <p className="text-lg font-bold">{selectedTable.checkedInTime}</p>
+
+                <div className={`rounded-full py-1 px-2 text-center text-xs font-medium flex items-center justify-center gap-1 ${getStatusColor(table.status)}`}>
+                  {getStatusIcon(table.status)}
+                  <span className="capitalize">{table.status}</span>
+                </div>
+
+                {table.status === "occupied" && (
+                  <div className="mt-3 text-xs space-y-1">
+                    <p className="font-medium truncate">{table.customerName}</p>
+                    <p className="text-muted-foreground">
+                      {table.partySize} guest{table.partySize !== 1 ? "s" : ""}
+                    </p>
                   </div>
                 )}
               </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-              {selectedTable.customerName && (
-                <div className="bg-secondary rounded-lg p-4 space-y-3">
-                  <p className="font-bold">Customer Information</p>
-                  <div className="space-y-2 text-sm">
+      {/* Table Details */}
+      {selectedTable && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Table {selectedTable.number} Details</CardTitle>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleEditTable(selectedTable)}
+                className="gap-2"
+              >
+                <Edit2 className="h-4 w-4" />
+                Edit
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  handleDeleteTable(selectedTable.id);
+                  setSelectedTable(null);
+                }}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Capacity</p>
+                <p className="text-lg font-bold">{selectedTable.capacity}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <p className={`text-lg font-bold capitalize`}>
+                  {selectedTable.status}
+                </p>
+              </div>
+              {selectedTable.partySize && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Party Size</p>
+                  <p className="text-lg font-bold">{selectedTable.partySize}</p>
+                </div>
+              )}
+              {selectedTable.checkedInTime && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Checked In</p>
+                  <p className="text-lg font-bold">{selectedTable.checkedInTime}</p>
+                </div>
+              )}
+            </div>
+
+            {selectedTable.customerName && (
+              <div className="bg-secondary rounded-lg p-4 space-y-3">
+                <p className="font-bold">Customer Information</p>
+                <div className="space-y-2 text-sm">
+                  <p className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Name:</span>
+                    <span className="font-medium">
+                      {selectedTable.customerName}
+                    </span>
+                  </p>
+                  {selectedTable.customerPhone && (
                     <p className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Name:</span>
+                      <Phone className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">
-                        {selectedTable.customerName}
+                        {selectedTable.customerPhone}
                       </span>
                     </p>
-                    {selectedTable.customerPhone && (
-                      <p className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
-                          {selectedTable.customerPhone}
-                        </span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {selectedTable.notes && (
-                <div className="bg-amber-50 dark:bg-amber-950 rounded-lg p-4">
-                  <p className="font-bold text-sm mb-2">Notes</p>
-                  <p className="text-sm">{selectedTable.notes}</p>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <p className="font-bold text-sm mb-3">Change Status</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {[
-                    "available",
-                    "occupied",
-                    "reserved",
-                    "cleaning",
-                  ].map((status) => (
-                    <Button
-                      key={status}
-                      variant={
-                        selectedTable.status === status ? "default" : "outline"
-                      }
-                      size="sm"
-                      onClick={() => {
-                        handleStatusChange(selectedTable.id, status);
-                        setSelectedTable({
-                          ...selectedTable,
-                          status: status as any,
-                        });
-                      }}
-                      className="capitalize"
-                    >
-                      {status}
-                    </Button>
-                  ))}
+                  )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+
+            {selectedTable.notes && (
+              <div className="bg-amber-50 dark:bg-amber-950 rounded-lg p-4">
+                <p className="font-bold text-sm mb-2">Notes</p>
+                <p className="text-sm">{selectedTable.notes}</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <p className="font-bold text-sm mb-3">Change Status</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {[
+                  "available",
+                  "occupied",
+                  "reserved",
+                  "cleaning",
+                ].map((status) => (
+                  <Button
+                    key={status}
+                    variant={
+                      selectedTable.status === status ? "default" : "outline"
+                    }
+                    size="sm"
+                    onClick={() => {
+                      handleStatusChange(selectedTable.id, status);
+                      setSelectedTable({
+                        ...selectedTable,
+                        status: status as any,
+                      });
+                    }}
+                    className="capitalize"
+                  >
+                    {status}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

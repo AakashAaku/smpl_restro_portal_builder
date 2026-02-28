@@ -1,9 +1,12 @@
+const API_URL = import.meta.env.VITE_API_URL || "/api";
+
 // Simple auth management with localStorage
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "customer";
+  phone?: string;
+  role: string;
   token: string;
 }
 
@@ -16,6 +19,8 @@ export function getAuth(): AuthUser | null {
   const stored = localStorage.getItem("auth_user");
   return stored ? JSON.parse(stored) : null;
 }
+
+export const getMe = getAuth;
 
 export function getAuthToken(): string | null {
   return localStorage.getItem("auth_token");
@@ -33,50 +38,39 @@ export function isAuthenticated(): boolean {
 
 export function isAdmin(): boolean {
   const auth = getAuth();
-  return auth?.role === "admin";
+  return auth?.role === "ADMIN" || auth?.role === "admin";
+}
+
+export function isStaff(): boolean {
+  const auth = getAuth();
+  return auth?.role !== "CUSTOMER";
 }
 
 export function isCustomer(): boolean {
   const auth = getAuth();
-  return auth?.role === "customer";
+  return auth?.role === "CUSTOMER" || auth?.role === "customer";
 }
-
-// Mock login - in production, call real API
+// Real login calling backend API
 export async function login(
   email: string,
   password: string
 ): Promise<AuthUser> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  const response = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
 
-  let user: AuthUser;
-
-  if (email === "admin@restaurant.com" && password === "admin123") {
-    user = {
-      id: "admin-001",
-      name: "Restaurant Admin",
-      email: "admin@restaurant.com",
-      role: "admin",
-      token: "admin-token-" + Date.now(),
-    };
-  } else if (email === "customer@example.com" && password === "customer123") {
-    user = {
-      id: "cust-001",
-      name: "John Doe",
-      email: "customer@example.com",
-      role: "customer",
-      token: "customer-token-" + Date.now(),
-    };
-  } else {
-    // Demo: any other email/pass works as customer
-    user = {
-      id: "cust-" + Math.random().toString(36).substr(2, 9),
-      name: email.split("@")[0],
-      email,
-      role: email.includes("admin") ? "admin" : "customer",
-      token: "token-" + Date.now(),
-    };
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Login failed");
   }
+
+  const data = await response.json();
+  const user: AuthUser = {
+    ...data.user,
+    token: data.token,
+  };
 
   saveAuth(user);
   return user;

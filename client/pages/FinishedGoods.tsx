@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, AlertTriangle, Package, TrendingUp, Zap, Loader2 } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Package, TrendingUp, Zap, Loader2, Leaf, Sparkles, History, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
   getFinishedGoods,
@@ -169,20 +169,28 @@ export default function FinishedGoods() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Finished Goods & Production
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Leaf className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+              VenzoSmart • Production Suite
+            </span>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            Finished <span className="text-primary italic">Goods</span>
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Manage recipes, plan production, and track finished goods inventory
+          <p className="text-muted-foreground mt-1 font-medium italic">
+            "Batch Crafting & Culinary Precision"
           </p>
         </div>
         <Dialog open={isAddingProduct} onOpenChange={setIsAddingProduct}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Product
+            <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
+              <Plus className="h-5 w-5" />
+              CREATE PRODUCTION RECIPE
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-screen overflow-y-auto">
@@ -225,7 +233,7 @@ export default function FinishedGoods() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="sellingPrice">Selling Price per Unit (₹) *</Label>
+                <Label htmlFor="sellingPrice">Selling Price per Unit (Rs.) *</Label>
                 <Input
                   id="sellingPrice"
                   type="number"
@@ -331,57 +339,70 @@ export default function FinishedGoods() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Products</p>
-                <p className="text-2xl font-bold mt-2">{totalFinishedGoods}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Stock Items</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{totalFinishedGoods}</p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">Master catalog</p>
               </div>
-              <Package className="h-6 w-6 text-primary" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <Package className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Inventory Value</p>
-                <p className="text-2xl font-bold mt-2">
-                  ₹{Math.round(totalFinishedValue).toLocaleString()}
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Asset Value</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
+                  Rs.{Math.round(totalFinishedValue).toLocaleString()}
                 </p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">Inventory appraisal</p>
               </div>
-              <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <TrendingUp className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="premium-card border-none shadow-lg overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Low Stock</p>
-                <p className="text-2xl font-bold mt-2 text-amber-600">
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Low Reserves</p>
+                <p className="text-3xl font-black tracking-tight text-amber-600">
                   {lowStockFinished}
                 </p>
+                <p className="text-[10px] text-amber-600 font-bold mt-2 italic">Restock advised</p>
               </div>
-              <AlertTriangle className="h-6 w-6 text-amber-600" />
+              <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Produced</p>
-                <p className="text-2xl font-bold mt-2">
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Total Yield</p>
+                <p className="text-3xl font-black tracking-tight text-blue-600">
                   {productionRecords.reduce((sum, r) => sum + r.quantityProduced, 0)}
                 </p>
+                <p className="text-[10px] text-blue-600 font-bold mt-2 tracking-tight">Units manufactured</p>
               </div>
-              <Zap className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                <Zap className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -389,9 +410,15 @@ export default function FinishedGoods() {
 
       {/* Tabs */}
       <Tabs defaultValue="inventory" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="inventory">Products & Recipes</TabsTrigger>
-          <TabsTrigger value="production">Production & History</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-emerald-50/50 p-1 h-12 rounded-xl max-w-md">
+          <TabsTrigger value="inventory" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold gap-2">
+            <Package className="h-4 w-4" />
+            Production Recipes
+          </TabsTrigger>
+          <TabsTrigger value="production" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold gap-2">
+            <History className="h-4 w-4" />
+            Batch History
+          </TabsTrigger>
         </TabsList>
 
         {/* Products Tab */}
@@ -421,32 +448,35 @@ export default function FinishedGoods() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Stock</p>
-                        <p className="text-lg font-semibold">{product.currentStock}</p>
+                    <div className="grid grid-cols-3 gap-6 py-4 border-y border-emerald-50 my-2">
+                      <div className="text-center">
+                        <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-tighter">Current Stock</p>
+                        <p className="text-2xl font-black text-emerald-950">{product.currentStock}</p>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">Cost</p>
-                        <p className="text-lg font-semibold">
-                          ₹{product.totalCost.toFixed(0)}
+                      <div className="text-center border-x border-emerald-50">
+                        <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-tighter">Cost Value</p>
+                        <p className="text-2xl font-black text-emerald-600">
+                          Rs.{product.totalCost.toFixed(0)}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">Price</p>
-                        <p className="text-lg font-semibold">
-                          ₹{product.sellingPrice.toFixed(0)}
+                      <div className="text-center">
+                        <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-tighter">Market Price</p>
+                        <p className="text-2xl font-black text-emerald-900">
+                          Rs.{product.sellingPrice.toFixed(0)}
                         </p>
                       </div>
                     </div>
 
-                    <div className="border-t pt-4">
-                      <p className="font-semibold mb-2">Recipe:</p>
-                      <div className="space-y-1 text-sm">
+                    <div className="pt-4">
+                      <p className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <ChevronRight className="h-3 w-3" />
+                        Recipe Manifest
+                      </p>
+                      <div className="space-y-2">
                         {product.recipe.map((item, idx) => (
-                          <div key={idx} className="flex justify-between text-muted-foreground">
-                            <span>{item.ingredientName}</span>
-                            <span className="font-medium">
+                          <div key={idx} className="flex justify-between items-center text-sm p-3 bg-slate-50 rounded-xl border border-slate-100/50">
+                            <span className="font-bold text-slate-700">{item.ingredientName}</span>
+                            <span className="font-black text-emerald-600 bg-white px-3 py-1 rounded-lg shadow-sm border border-emerald-50">
                               {item.quantityRequired} {item.unit}
                             </span>
                           </div>
@@ -495,8 +525,8 @@ export default function FinishedGoods() {
                                 <div
                                   key={idx}
                                   className={`flex justify-between text-sm p-2 rounded ${isAvailable
-                                      ? "bg-green-50 text-green-900"
-                                      : "bg-red-50 text-red-900"
+                                    ? "bg-green-50 text-green-900"
+                                    : "bg-red-50 text-red-900"
                                     }`}
                                 >
                                   <span>{item.ingredientName}</span>

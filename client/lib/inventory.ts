@@ -185,14 +185,14 @@ export function savePurchase(purchase: Purchase): void {
     const oldStock = material.currentStock;
     material.currentStock += purchase.quantity;
     material.lastPurchasePrice = purchase.unitPrice;
-    
+
     // Calculate average cost
     const allPurchases = purchases.filter((p) => p.rawMaterialId === purchase.rawMaterialId);
     const totalCost = allPurchases.reduce((sum, p) => sum + p.totalCost, 0);
     const totalQuantity = allPurchases.reduce((sum, p) => sum + p.quantity, 0);
     material.averageCost = totalQuantity > 0 ? totalCost / totalQuantity : purchase.unitPrice;
 
-    if (expiryDate) {
+    if (purchase.expiryDate) {
       material.expiryDate = purchase.expiryDate;
     }
 
@@ -446,7 +446,7 @@ export function getDailyStockReport(date: string) {
     const materialAdjustments = adjustments.filter(
       (a) => a.rawMaterialId === material.id
     );
-    const openingStock = material.currentStock - 
+    const openingStock = material.currentStock -
       materialAdjustments
         .filter((a) => a.adjustmentReason === "purchase")
         .reduce((sum, a) => sum + (a.newStock - a.oldStock), 0) +

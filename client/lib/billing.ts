@@ -35,10 +35,10 @@ export interface BillDetails {
 
 // Default restaurant details (should come from Settings)
 export const DEFAULT_RESTAURANT = {
-  name: "Delicious Bites Restaurant",
-  pan: "123456789", // PAN number
-  address: "Kathmandu, Nepal",
-  phone: "01-4123456",
+  name: "VenzoSmart",
+  pan: "601234567", // Example Nepal PAN
+  address: "Radhe Radhe, Bhaktapur, Nepal",
+  phone: "01-5123456",
 };
 
 // VAT Rate for Nepal (typically 13%)
@@ -139,6 +139,7 @@ export function generateBill(
     restaurantPhone: restaurantDetails.phone,
     items,
     ...amounts,
+    vatPercent: VAT_RATE * 100,
     paymentMethod,
   };
 }
@@ -169,8 +170,8 @@ export function generateBillHTML(bill: BillDetails): string {
     <tr>
       <td>${item.name}</td>
       <td style="text-align: center;">${item.quantity}</td>
-      <td style="text-align: right;">₹${item.unitPrice.toFixed(2)}</td>
-      <td style="text-align: right;">₹${(item.quantity * item.unitPrice).toFixed(2)}</td>
+      <td style="text-align: right;">Rs.${item.unitPrice.toFixed(2)}</td>
+      <td style="text-align: right;">Rs.${(item.quantity * item.unitPrice).toFixed(2)}</td>
     </tr>
   `
     )
@@ -290,31 +291,31 @@ export function generateBillHTML(bill: BillDetails): string {
       <div class="amount-section">
         <div class="amount-row">
           <span>Subtotal:</span>
-          <span>₹${bill.subtotal.toFixed(2)}</span>
+          <span>Rs.${bill.subtotal.toFixed(2)}</span>
         </div>
         ${bill.discountAmount > 0 ? `
         <div class="amount-row">
           <span>Discount (${bill.discountPercent}%):</span>
-          <span>-₹${bill.discountAmount.toFixed(2)}</span>
+          <span>-Rs.${bill.discountAmount.toFixed(2)}</span>
         </div>
         ` : ""}
         <div class="amount-row">
           <span>Taxable Amount:</span>
-          <span>₹${bill.taxableAmount.toFixed(2)}</span>
+          <span>Rs.${bill.taxableAmount.toFixed(2)}</span>
         </div>
         <div class="amount-row">
           <span>VAT (${(VAT_RATE * 100).toFixed(0)}%):</span>
-          <span>₹${bill.vatAmount.toFixed(2)}</span>
+          <span>Rs.${bill.vatAmount.toFixed(2)}</span>
         </div>
         ${bill.deliveryFee > 0 ? `
         <div class="amount-row">
           <span>Delivery Charge:</span>
-          <span>₹${bill.deliveryFee.toFixed(2)}</span>
+          <span>Rs.${bill.deliveryFee.toFixed(2)}</span>
         </div>
         ` : ""}
         <div class="amount-row total">
           <span>Total Amount:</span>
-          <span>₹${bill.totalAmount.toFixed(2)}</span>
+          <span>Rs.${bill.totalAmount.toFixed(2)}</span>
         </div>
       </div>
 

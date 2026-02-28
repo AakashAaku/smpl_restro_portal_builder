@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    strictPort: true,
     fs: {
       allow: [path.resolve(__dirname)],
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
@@ -33,7 +34,12 @@ function expressPlugin(): Plugin {
       const app = createServer();
 
       // Add Express app as middleware to Vite dev server
-      server.middlewares.use(app);
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.startsWith('/api')) {
+          return (app as any)(req, res, next);
+        }
+        next();
+      });
     },
   };
 }

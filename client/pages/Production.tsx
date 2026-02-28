@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState, useEffect } from "react";
-import { Plus, Clock, TrendingUp, AlertCircle, Loader2 } from "lucide-react";
+import { Plus, Clock, TrendingUp, AlertCircle, Loader2, Leaf, Sparkles, ChefHat, Timer, Zap, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import {
   getPrepLists,
@@ -111,20 +111,28 @@ export default function Production() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Production Planning
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Leaf className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+              VenzoSmart • Culinary Operations
+            </span>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            Production <span className="text-primary italic">Planning</span>
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Kitchen forecasting, prep lists, and production schedules
+          <p className="text-muted-foreground mt-1 font-medium italic">
+            "Precision Preparation for 110% Pure Veg Excellence"
           </p>
         </div>
         <Dialog open={isAddingPrepList} onOpenChange={setIsAddingPrepList}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Prep List
+            <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
+              <Plus className="h-5 w-5" />
+              GENERATE PREP LIST
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -181,70 +189,68 @@ export default function Production() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Prep Items</p>
-                <p className="text-2xl font-bold mt-2">{totalPrepItems}</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {completedItems} completed
-                </p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Queue Density</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{totalPrepItems}</p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">{completedItems} finalized cycles</p>
               </div>
-              <Clock className="h-6 w-6 text-primary" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <ClipboardList className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="premium-card border-none shadow-lg overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">In Progress</p>
-                <p className="text-2xl font-bold mt-2">{inProgressItems}</p>
-                <p className="text-xs text-amber-600 mt-2">Being prepared</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Active Prep</p>
+                <p className="text-3xl font-black tracking-tight text-amber-600">{inProgressItems}</p>
+                <p className="text-[10px] text-amber-600 font-bold mt-2">Current kitchen activity</p>
               </div>
-              <TrendingUp className="h-6 w-6 text-amber-600" />
+              <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                <Timer className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Total Prep Time
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Labor Commitment</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
+                  {Math.round(totalPrepTime / 60)}<span className="text-sm text-muted-foreground">h</span>
                 </p>
-                <p className="text-2xl font-bold mt-2">
-                  {Math.round(totalPrepTime / 60)} hrs
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  All items
-                </p>
+                <p className="text-[10px] text-blue-600 font-bold mt-2">Allocated preparation time</p>
               </div>
-              <Clock className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                <Clock className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Completion Rate
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Efficiency</p>
+                <p className="text-3xl font-black tracking-tight text-emerald-700">
+                  {totalPrepItems > 0 ? Math.round((completedItems / totalPrepItems) * 100) : 0}%
                 </p>
-                <p className="text-2xl font-bold mt-2">
-                  {totalPrepItems > 0
-                    ? Math.round((completedItems / totalPrepItems) * 100)
-                    : 0}
-                  %
-                </p>
-                <p className="text-xs text-green-600 mt-2">On track</p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">Plan adherence rate</p>
               </div>
-              <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <Zap className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -298,10 +304,10 @@ export default function Production() {
                     </div>
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${prepList.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : prepList.status === "in-progress"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-gray-100 text-gray-800"
+                        ? "bg-green-100 text-green-800"
+                        : prepList.status === "in-progress"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-gray-100 text-gray-800"
                         }`}
                     >
                       {prepList.status === "completed"
@@ -432,16 +438,16 @@ export default function Production() {
                       .filter(i => i.category === "Main Course")
                       .map(item => (
                         <div key={item.id} className={`p-3 border-l-4 rounded ${item.status === 'completed' ? 'border-green-500 bg-green-50' :
-                            item.status === 'in-progress' ? 'border-amber-500 bg-amber-50' :
-                              'border-gray-400 bg-gray-50'
+                          item.status === 'in-progress' ? 'border-amber-500 bg-amber-50' :
+                            'border-gray-400 bg-gray-50'
                           }`}>
                           <p className="font-medium">{item.itemName}</p>
                           <p className="text-sm text-muted-foreground">
                             Prep Time: {item.prepTime} min | Qty: {item.prepQuantity}
                           </p>
                           <p className={`text-xs font-semibold mt-1 ${item.status === 'completed' ? 'text-green-700' :
-                              item.status === 'in-progress' ? 'text-amber-700' :
-                                'text-gray-700'
+                            item.status === 'in-progress' ? 'text-amber-700' :
+                              'text-gray-700'
                             }`}>
                             {item.status === 'completed' ? '✓ Completed' :
                               item.status === 'in-progress' ? 'In Progress' :
@@ -465,16 +471,16 @@ export default function Production() {
                       .filter(i => i.category === "Breads")
                       .map(item => (
                         <div key={item.id} className={`p-3 border-l-4 rounded ${item.status === 'completed' ? 'border-green-500 bg-green-50' :
-                            item.status === 'in-progress' ? 'border-amber-500 bg-amber-50' :
-                              'border-gray-400 bg-gray-50'
+                          item.status === 'in-progress' ? 'border-amber-500 bg-amber-50' :
+                            'border-gray-400 bg-gray-50'
                           }`}>
                           <p className="font-medium">{item.itemName}</p>
                           <p className="text-sm text-muted-foreground">
                             Prep Time: {item.prepTime} min | Qty: {item.prepQuantity}
                           </p>
                           <p className={`text-xs font-semibold mt-1 ${item.status === 'completed' ? 'text-green-700' :
-                              item.status === 'in-progress' ? 'text-amber-700' :
-                                'text-gray-700'
+                            item.status === 'in-progress' ? 'text-amber-700' :
+                              'text-gray-700'
                             }`}>
                             {item.status === 'completed' ? '✓ Completed' :
                               item.status === 'in-progress' ? 'In Progress' :

@@ -25,6 +25,12 @@ import {
   TrendingDown,
   Package,
   TrendingUp,
+  CheckCircle,
+  Leaf,
+  Sparkles,
+  ChevronRight,
+  Filter,
+  ArrowRightLeft
 } from "lucide-react";
 import {
   Ingredient,
@@ -53,8 +59,8 @@ export default function Inventory() {
     name: "",
     unit: "kg",
     currentStock: 0,
-    reorderLevel: 5,
-    costPerUnit: 0,
+    minStock: 5,
+    unitPrice: 0,
     supplierId: undefined,
   });
 
@@ -105,8 +111,8 @@ export default function Inventory() {
       await createIngredient({
         ...ingredientForm,
         currentStock: parseFloat(ingredientForm.currentStock.toString()),
-        reorderLevel: parseFloat(ingredientForm.reorderLevel.toString()),
-        costPerUnit: parseFloat(ingredientForm.costPerUnit.toString()),
+        minStock: parseFloat(ingredientForm.minStock.toString()),
+        unitPrice: parseFloat(ingredientForm.unitPrice.toString()),
       });
       toast.success("Ingredient added successfully");
       setIsAddingIngredient(false);
@@ -139,10 +145,10 @@ export default function Inventory() {
     try {
       await recordStockMovement({
         ingredientId: parseInt(wasteForm.ingredientId),
-        type: wasteForm.reason === "damaged" ? "damage" : "out",
+        type: "OUT",
         quantity: parseFloat(wasteForm.quantity),
         reference: "Waste Recording",
-        notes: wasteForm.notes
+        notes: `${wasteForm.reason}: ${wasteForm.notes}`
       });
       toast.success("Waste recorded successfully");
       setIsRecordingWaste(false);
@@ -158,8 +164,8 @@ export default function Inventory() {
       name: "",
       unit: "kg",
       currentStock: 0,
-      reorderLevel: 5,
-      costPerUnit: 0,
+      minStock: 5,
+      unitPrice: 0,
     });
   };
 
@@ -176,19 +182,29 @@ export default function Inventory() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
-          <p className="text-muted-foreground mt-2">
-            Track stock levels, waste, and supplier performance
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Leaf className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+              VenzoSmart • Supply Chain & Stock
+            </span>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            Inventory <span className="text-primary italic">Control</span>
+          </h1>
+          <p className="text-muted-foreground mt-1 font-medium italic">
+            "Farm-to-Table Freshness, Digitally Tracked"
           </p>
         </div>
         <div className="flex gap-3">
           <Dialog open={isRecordingWaste} onOpenChange={setIsRecordingWaste}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" className="h-12 px-6 rounded-xl font-bold border-slate-200 gap-2 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all">
                 <AlertTriangle className="h-4 w-4" />
-                Record Waste
+                RECORD WASTE
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -250,9 +266,9 @@ export default function Inventory() {
 
           <Dialog open={isAddingIngredient} onOpenChange={setIsAddingIngredient}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Ingredient
+              <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
+                <Plus className="h-5 w-5" />
+                ADD RAW MATERIAL
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -302,8 +318,8 @@ export default function Inventory() {
                       id="ing-reorder"
                       type="number"
                       required
-                      value={ingredientForm.reorderLevel}
-                      onChange={(e) => setIngredientForm({ ...ingredientForm, reorderLevel: parseFloat(e.target.value) })}
+                      value={ingredientForm.minStock}
+                      onChange={(e) => setIngredientForm({ ...ingredientForm, minStock: parseFloat(e.target.value) })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -312,8 +328,8 @@ export default function Inventory() {
                       id="ing-cost"
                       type="number"
                       required
-                      value={ingredientForm.costPerUnit}
-                      onChange={(e) => setIngredientForm({ ...ingredientForm, costPerUnit: parseFloat(e.target.value) })}
+                      value={ingredientForm.unitPrice}
+                      onChange={(e) => setIngredientForm({ ...ingredientForm, unitPrice: parseFloat(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -337,49 +353,91 @@ export default function Inventory() {
         </div>
       </div>
 
+      {/* Critical Alerts */}
+      {ingredients.some(ing => ing.currentStock <= ing.minStock) && (
+        <div className="bg-rose-50/50 border border-rose-100 p-4 rounded-2xl animate-pulse relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
+          <div className="flex items-center">
+            <div className="h-10 w-10 rounded-full bg-rose-100 flex items-center justify-center mr-4">
+              <AlertTriangle className="h-5 w-5 text-rose-600" />
+            </div>
+            <div>
+              <p className="text-sm text-rose-900 font-black uppercase tracking-tight">Supply Chain Warning</p>
+              <p className="text-xs text-rose-700 font-medium">
+                {ingredients.filter(ing => ing.currentStock <= ing.minStock).length} strategic items are below critical reserves. Requisition advised.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-2xl font-bold mt-2">₹{stats?.totalInventoryValue?.toLocaleString() || "0"}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Stock Valuation</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
+                  Rs.{stats?.totalInventoryValue?.toLocaleString() || "0"}
+                </p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">Capital investment</p>
               </div>
-              <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <TrendingUp className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold mt-2">{stats?.itemCount || 0}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">SKU Count</p>
+                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
+                  {stats?.itemCount || 0}
+                </p>
+                <p className="text-[10px] text-blue-600 font-bold mt-2">Active ingredients</p>
               </div>
-              <Package className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                <Package className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Low Stock</p>
-                <p className="text-2xl font-bold mt-2">{stats?.lowStockCount || 0}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Depleted Items</p>
+                <p className="text-3xl font-black tracking-tight text-rose-600">
+                  {stats?.lowStockCount || 0}
+                </p>
+                <p className="text-[10px] text-rose-600 font-bold mt-2">Action required</p>
               </div>
-              <AlertTriangle className="h-6 w-6 text-red-600" />
+              <div className="h-12 w-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-sm">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Monthly Waste</p>
-                <p className="text-2xl font-bold mt-2">₹{stats?.monthlyWaste || "0"}</p>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Shrinkage</p>
+                <p className="text-3xl font-black tracking-tight text-amber-600">
+                  Rs.{stats?.monthlyWaste || "0"}
+                </p>
+                <p className="text-[10px] text-amber-600 font-bold mt-2">Waste & variance</p>
               </div>
-              <TrendingDown className="h-6 w-6 text-amber-600" />
+              <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                <TrendingDown className="h-6 w-6" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -425,9 +483,9 @@ export default function Inventory() {
                         <td className="py-4 px-4 font-medium">{item.name}</td>
                         <td className="py-4 px-4">{item.currentStock}</td>
                         <td className="py-4 px-4">{item.unit}</td>
-                        <td className="py-4 px-4">{item.reorderLevel}</td>
+                        <td className="py-4 px-4">{item.minStock}</td>
                         <td className="py-4 px-4">
-                          {item.currentStock <= item.reorderLevel ? (
+                          {item.currentStock <= item.minStock ? (
                             <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">Low Stock</span>
                           ) : (
                             <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Healthy</span>
@@ -437,6 +495,53 @@ export default function Inventory() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="expiry">
+          <Card>
+            <CardHeader>
+              <CardTitle>Inventory Health & Reorder Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {ingredients.filter(ing => ing.currentStock <= ing.minStock).map(ing => (
+                  <div key={ing.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-red-100 p-2 rounded-full">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">{ing.name}</p>
+                        <p className="text-xs text-muted-foreground">Current: {ing.currentStock} {ing.unit} | Target: &gt;{ing.minStock} {ing.unit}</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">Create PO</Button>
+                  </div>
+                ))}
+                {ingredients.filter(ing => ing.currentStock <= ing.minStock).length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CheckCircle className="h-12 w-12 text-green-300 mx-auto mb-3" />
+                    <p>All stock levels are currently healthy!</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="waste" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Stock Adjustments & Waste</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-muted-foreground text-sm border-dashed border-2 rounded">
+                <TrendingDown className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                <p>Automated stock deduction is linked to Kitchen Display.</p>
+                <p className="mt-1">Use "Record Waste" at the top for manual adjustments.</p>
               </div>
             </CardContent>
           </Card>

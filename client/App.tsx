@@ -1,14 +1,13 @@
 import "./global.css";
 
 import { Toaster } from "@/components/ui/toaster";
-import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, ReactNode } from "react";
 import { registerServiceWorker, enableOfflineMode } from "./lib/pwa";
-import { getAuth, isAdmin, isCustomer } from "./lib/auth";
+import { getAuth, isAdmin, isCustomer, isStaff } from "./lib/auth";
 
 // Pages
 import Login from "./pages/Login";
@@ -31,7 +30,10 @@ import Promotions from "./pages/Promotions";
 import PurchaseManagement from "./pages/PurchaseManagement";
 import DailyStockReport from "./pages/DailyStockReport";
 import FinishedGoods from "./pages/FinishedGoods";
+import KitchenDisplay from "./pages/KitchenDisplay";
 import EventConfiguration from "./pages/EventConfiguration";
+import Requisition from "./pages/Requisition";
+import Assets from "./pages/Assets";
 
 // Customer Pages
 import CustomerHome from "./pages/customer/CustomerHome";
@@ -55,6 +57,21 @@ function AdminRoute({ children }: { children: ReactNode }) {
   }
 
   if (!isAdmin()) {
+    return <Navigate to="/customer/home" replace />;
+  }
+
+  return <MainLayout>{children}</MainLayout>;
+}
+
+// Protected Route Component for Staff (Admin, Chef, Staff, etc.)
+function StaffRoute({ children }: { children: ReactNode }) {
+  const auth = getAuth();
+
+  if (!auth) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isStaff()) {
     return <Navigate to="/customer/home" replace />;
   }
 
@@ -97,7 +114,7 @@ const App = () => {
     if (!themeColorMeta) {
       themeColorMeta = document.createElement("meta");
       themeColorMeta.setAttribute("name", "theme-color");
-      themeColorMeta.setAttribute("content", "#FF8C42");
+      themeColorMeta.setAttribute("content", "#059669");
       document.head.appendChild(themeColorMeta);
     }
   }, []);
@@ -258,6 +275,33 @@ const App = () => {
               }
             />
 
+            <Route
+              path="/admin/kitchen-display"
+              element={
+                <StaffRoute>
+                  <KitchenDisplay />
+                </StaffRoute>
+              }
+            />
+
+            <Route
+              path="/admin/requisition"
+              element={
+                <StaffRoute>
+                  <Requisition />
+                </StaffRoute>
+              }
+            />
+
+            <Route
+              path="/admin/assets"
+              element={
+                <AdminRoute>
+                  <Assets />
+                </AdminRoute>
+              }
+            />
+
             {/* Customer Portal */}
             <Route
               path="/customer/home"
@@ -307,4 +351,4 @@ const App = () => {
   );
 };
 
-createRoot(document.getElementById("root")!).render(<App />);
+export default App;

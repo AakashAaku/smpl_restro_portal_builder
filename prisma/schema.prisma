@@ -1,0 +1,286 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MenuItem {
+  id          Int         @id @default(autoincrement())
+  name        String
+  category    String
+  price       Float
+  prepTime    Int
+  description String?
+  image       String?
+  status      String      @default("available")
+  currentStock Float      @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+  recipes     Recipe[]
+  productionRecords ProductionRecord[]
+}
+
+model ProductionRecord {
+  id               Int      @id @default(autoincrement())
+  menuItemId       Int
+  menuItem         MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  quantityProduced Float
+  dateProduced     DateTime @default(now())
+  createdAt        DateTime @default(now())
+}
+
+model Recipe {
+  id           Int        @id @default(autoincrement())
+  menuItemId   Int
+  ingredientId Int
+  quantity     Float
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+}
+
+model Ingredient {
+  id             Int             @id @default(autoincrement())
+  name           String
+  unit           String
+  currentStock   Float           @default(0)
+  minStock       Float           @default(0)
+  unitPrice      Float           @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  purchases      PurchaseItem[]
+  recipes        Recipe[]
+  requisitions   RequisitionItem[]
+  stockMovements StockMovement[]
+}
+
+model Supplier {
+  id        Int        @id @default(autoincrement())
+  name      String
+  contact   String?
+  email     String?
+  address   String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  purchases Purchase[]
+}
+
+model StockMovement {
+  id           Int          @id @default(autoincrement())
+  ingredientId Int
+  quantity     Float
+  type         MovementType
+  reason       String?
+  date         DateTime     @default(now())
+  ingredient   Ingredient   @relation(fields: [ingredientId], references: [id])
+}
+
+model Purchase {
+  id            Int            @id @default(autoincrement())
+  supplierId    Int
+  totalAmount   Float
+  status        String         @default("completed")
+  invoiceNo     String?
+  notes         String?
+  expiryDate    DateTime?
+  date          DateTime       @default(now())
+  supplier      Supplier       @relation(fields: [supplierId], references: [id])
+  purchaseItems PurchaseItem[]
+}
+
+model PurchaseItem {
+  id           Int        @id @default(autoincrement())
+  purchaseId   Int
+  ingredientId Int
+  quantity     Float
+  unitPrice    Float
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  purchase     Purchase   @relation(fields: [purchaseId], references: [id])
+}
+
+model Table {
+  id            Int       @id @default(autoincrement())
+  number        String    @unique
+  capacity      Int
+  status        String    @default("available")
+  qrCode        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  checkedInTime DateTime?
+  customerName  String?
+  customerPhone String?
+  notes         String?
+  partySize     Int?
+  orders        Order[]
+}
+
+model Customer {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?  @unique
+  phone         String?
+  loyaltyPoints Int      @default(0)
+  isVip         Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        Order[]
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique
+  customerId    String?
+  tableId       Int?
+  status        OrderStatus   @default(PENDING)
+  totalAmount   Float
+  paymentMethod String?
+  paymentStatus PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  table         Table?        @relation(fields: [tableId], references: [id])
+  orderItems    OrderItem[]
+}
+
+model OrderItem {
+  id         Int      @id @default(autoincrement())
+  orderId    String
+  menuItemId Int
+  quantity   Int
+  price      Float
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  order      Order    @relation(fields: [orderId], references: [id])
+}
+
+model Expense {
+  id          Int      @id @default(autoincrement())
+  description String
+  amount      Float
+  date        DateTime @default(now())
+  category    String
+  status      String   @default("paid")
+}
+
+model Promotion {
+  id           Int      @id @default(autoincrement())
+  name         String
+  type         String
+  value        Float
+  applicableOn String
+  startDate    DateTime
+  endDate      DateTime
+  isActive     Boolean  @default(true)
+  usageCount   Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+model Coupon {
+  id                Int      @id @default(autoincrement())
+  code              String   @unique
+  discount          Float
+  discountType      String
+  minimumOrderValue Float    @default(0)
+  maxUses           Int      @default(100)
+  currentUses       Int      @default(0)
+  expiryDate        DateTime
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+}
+
+model Setting {
+  id             Int     @id @default(1)
+  restaurantName String  @default("Venjo Restro")
+  address        String?
+  phone          String?
+  email          String?
+  taxPercentage  Float   @default(5.0)
+  currency       String  @default("INR")
+  currencySymbol String  @default("₹")
+  footerNote     String? @default("Thank you for dining with us!")
+}
+
+model Staff {
+  id                Int      @id @default(autoincrement())
+  name              String
+  role              String
+  email             String?  @unique
+  phone             String?
+  performanceRating Float    @default(0)
+  joinDate          DateTime @default(now())
+  salary            Float    @default(0)
+  status            String   @default("active")
+}
+
+model Asset {
+  id           Int      @id @default(autoincrement())
+  name         String
+  category     String
+  value        Float
+  status       String   @default("active") // active, maintenance, disposed
+  purchaseDate DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Requisition {
+  id           Int               @id @default(autoincrement())
+  requisitionNo String           @unique
+  staffId      Int
+  status       String            @default("pending") // pending, approved, rejected, ordered
+  items        RequisitionItem[]
+  notes        String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model RequisitionItem {
+  id             Int         @id @default(autoincrement())
+  requisitionId  Int
+  requisition    Requisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  ingredientId   Int
+  ingredient     Ingredient  @relation(fields: [ingredientId], references: [id])
+  quantity       Float
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  CHEF
+  WAITER
+  CUSTOMER
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  SERVED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum MovementType {
+  IN
+  OUT
+}

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Leaf } from "lucide-react";
 import { login } from "@/lib/auth";
 
 export default function Login() {
@@ -21,7 +21,7 @@ export default function Login() {
 
     try {
       const user = await login(email, password);
-      
+
       // Redirect based on role
       if (user.role === "admin") {
         navigate("/admin/dashboard");
@@ -60,19 +60,32 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background decorative elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-100/30 rounded-full blur-3xl" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-green-100/30 rounded-full blur-3xl" />
+
+      <div className="w-full max-w-md space-y-8 relative z-10">
         {/* Logo/Header */}
         <div className="text-center">
-          <div className="text-5xl mb-4">🍽️</div>
-          <h1 className="text-3xl font-bold">VenzoSmart</h1>
-          <p className="text-muted-foreground mt-2">
-            Admin Portal & Customer Ordering System
+          <div className="flex justify-center mb-6">
+            <div className="flex h-20 w-20 items-center justify-center rounded-[2rem] bg-gradient-to-br from-emerald-600 to-green-500 text-white shadow-2xl organic-glow rotate-3 hover:rotate-0 transition-transform duration-500">
+              <Leaf className="h-12 w-12" />
+            </div>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            VENZO<span className="text-primary">SMART</span>
+          </h1>
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-primary/70 mt-2">
+            110% Pure Veg & Eggless
+          </p>
+          <p className="text-sm text-muted-foreground mt-4 font-medium">
+            Bhaktapur's Premium Organic Dining
           </p>
         </div>
 
         {/* Login Card */}
-        <Card className="shadow-lg">
+        <Card className="premium-card shadow-2xl border-none glass overflow-hidden">
           <CardHeader>
             <CardTitle className="text-2xl text-center">Login</CardTitle>
           </CardHeader>
@@ -149,7 +162,7 @@ export default function Login() {
                 variant="outline"
                 onClick={handleDemoAdmin}
                 disabled={isLoading}
-                className="gap-2"
+                className="gap-2 rounded-xl border-emerald-100 hover:bg-emerald-50 hover:text-emerald-700 transition-all"
               >
                 👨‍💼 Admin Demo
               </Button>
@@ -158,7 +171,7 @@ export default function Login() {
                 variant="outline"
                 onClick={handleDemoCustomer}
                 disabled={isLoading}
-                className="gap-2"
+                className="gap-2 rounded-xl border-emerald-100 hover:bg-emerald-50 hover:text-emerald-700 transition-all"
               >
                 👤 Customer Demo
               </Button>
@@ -179,16 +192,16 @@ export default function Login() {
 
         {/* Features */}
         <div className="grid grid-cols-2 gap-4 text-center text-sm">
-          <div className="p-3 border border-border rounded-lg">
-            <p className="font-semibold mb-1">👨‍💼 Admin Portal</p>
-            <p className="text-muted-foreground text-xs">
-              Manage menu, orders, inventory & staff
+          <div className="p-4 rounded-2xl bg-white/50 backdrop-blur-sm border border-emerald-50 shadow-sm">
+            <p className="font-bold text-emerald-900 mb-1">👨‍💼 Admin Portal</p>
+            <p className="text-emerald-700/60 text-[10px] font-medium leading-tight">
+              Precision control over menu & inventory
             </p>
           </div>
-          <div className="p-3 border border-border rounded-lg">
-            <p className="font-semibold mb-1">👤 Customer Portal</p>
-            <p className="text-muted-foreground text-xs">
-              Browse menu, place orders, track delivery
+          <div className="p-4 rounded-2xl bg-white/50 backdrop-blur-sm border border-emerald-50 shadow-sm">
+            <p className="font-bold text-emerald-900 mb-1">👤 Customer Express</p>
+            <p className="text-emerald-700/60 text-[10px] font-medium leading-tight">
+              Seamless organic ordering experience
             </p>
           </div>
         </div>

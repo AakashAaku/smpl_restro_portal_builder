@@ -1,210 +1,248 @@
 import { RequestHandler } from "express";
+import prisma from "../lib/prisma";
 
-export interface SalesReport {
-  date: string;
-  totalOrders: number;
-  totalRevenue: number;
-  averageOrderValue: number;
-  paymentBreakdown: {
-    cash: number;
-    card: number;
-    upi: number;
-    other: number;
-  };
-}
+export const getDailySalesReport: RequestHandler = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
 
-export interface Expense {
-  id: number;
-  category: "salary" | "utilities" | "marketing" | "supplies" | "other";
-  amount: number;
-  date: string;
-  description: string;
-  status: "pending" | "paid";
-}
-
-let expenses: Expense[] = [
-  {
-    id: 1,
-    category: "salary",
-    amount: 50000,
-    date: "2024-01-01",
-    description: "Monthly staff salary",
-    status: "paid",
-  },
-  {
-    id: 2,
-    category: "utilities",
-    amount: 8000,
-    date: "2024-01-15",
-    description: "Electricity and water bill",
-    status: "paid",
-  },
-  {
-    id: 3,
-    category: "marketing",
-    amount: 5000,
-    date: "2024-01-20",
-    description: "Social media marketing campaign",
-    status: "pending",
-  },
-  {
-    id: 4,
-    category: "supplies",
-    amount: 12000,
-    date: "2024-01-22",
-    description: "Kitchen equipment replacement",
-    status: "pending",
-  },
-];
-
-// Mock sales data
-const generateSalesReports = (): SalesReport[] => {
-  const reports: SalesReport[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split("T")[0];
-
-    reports.push({
-      date: dateStr,
-      totalOrders: Math.floor(Math.random() * 30) + 15,
-      totalRevenue: Math.floor(Math.random() * 50000) + 20000,
-      averageOrderValue: Math.floor(Math.random() * 800) + 400,
-      paymentBreakdown: {
-        cash: Math.floor(Math.random() * 20000) + 5000,
-        card: Math.floor(Math.random() * 20000) + 5000,
-        upi: Math.floor(Math.random() * 20000) + 5000,
-        other: Math.floor(Math.random() * 10000) + 2000,
+    const orders = await prisma.order.findMany({
+      where: {
+        createdAt: {
+          gte: startDate ? new Date(startDate as string) : undefined,
+          lte: endDate ? new Date(endDate as string) : undefined,
+        },
+      },
+      select: {
+        createdAt: true,
+        totalAmount: true,
+        paymentMethod: true,
       },
     });
-  }
-  return reports;
-};
 
-export const getDailySalesReport: RequestHandler = (req, res) => {
-  const { startDate, endDate } = req.query;
-
-  const reports = generateSalesReports();
-
-  if (startDate || endDate) {
-    const filtered = reports.filter((r) => {
-      const rDate = new Date(r.date);
-      const start = startDate ? new Date(startDate as string) : new Date(0);
-      const end = endDate ? new Date(endDate as string) : new Date();
-      return rDate >= start && rDate <= end;
+    // Group by date
+    const reports: Record<string, any> = {};
+    orders.forEach((order) => {
+      const dateStr = order.createdAt.toISOString().split("T")[0];
+      if (!reports[dateStr]) {
+        reports[dateStr] = {
+          date: dateStr,
+          totalOrders: 0,
+          totalRevenue: 0,
+          paymentBreakdown: { cash: 0, card: 0, online: 0 },
+        };
+      }
+      reports[dateStr].totalOrders++;
+      reports[dateStr].totalRevenue += order.totalAmount;
+      const method = (order.paymentMethod || "online").toLowerCase();
+      if (reports[dateStr].paymentBreakdown[method] !== undefined) {
+        reports[dateStr].paymentBreakdown[method] += order.totalAmount;
+      }
     });
-    res.json(filtered);
-    return;
+
+    res.json(Object.values(reports));
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch daily sales report" });
   }
-
-  res.json(reports);
 };
 
-export const getMonthlySalesReport: RequestHandler = (_req, res) => {
-  const months = [
-    { month: "Jan", revenue: 450000, orders: 320, profit: 180000 },
-    { month: "Feb", revenue: 480000, orders: 340, profit: 192000 },
-    { month: "Mar", revenue: 520000, orders: 370, profit: 208000 },
-    { month: "Apr", revenue: 490000, orders: 350, profit: 196000 },
-    { month: "May", revenue: 560000, orders: 400, profit: 224000 },
-    { month: "Jun", revenue: 580000, orders: 410, profit: 232000 },
-  ];
+export const getMonthlySalesReport: RequestHandler = async (_req, res) => {
+  try {
+    // Simplified: Group by month for the last 6 months
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  res.json(months);
-};
+    const orders = await prisma.order.findMany({
+      where: { createdAt: { gte: sixMonthsAgo } },
+      select: { createdAt: true, totalAmount: true },
+    });
 
-export const getFinancialSummary: RequestHandler = (_req, res) => {
-  const reports = generateSalesReports();
-  const totalRevenue = reports.reduce((sum, r) => sum + r.totalRevenue, 0);
-  const totalExpenses = expenses
-    .filter((e) => e.status === "paid")
-    .reduce((sum, e) => sum + e.amount, 0);
-  const totalProfit = totalRevenue - totalExpenses;
-  const profitMargin = Math.round((totalProfit / totalRevenue) * 100);
+    const months: Record<string, any> = {};
+    orders.forEach((order) => {
+      const month = order.createdAt.toLocaleString("default", { month: "short" });
+      if (!months[month]) {
+        months[month] = { month, revenue: 0, orders: 0, profit: 0, expense: 0 };
+      }
+      months[month].revenue += order.totalAmount;
+      months[month].orders++;
+      months[month].expense += order.totalAmount * 0.6; // Assuming 60% COGS + OpEx
+      months[month].profit = months[month].revenue - months[month].expense;
+    });
 
-  res.json({
-    totalRevenue,
-    totalExpenses,
-    totalProfit,
-    profitMargin: `${profitMargin}%`,
-    revenueLastWeek: reports.slice(-7).reduce((sum, r) => sum + r.totalRevenue, 0),
-    expensesLastWeek: expenses
-      .filter((e) => e.status === "paid")
-      .slice(-7)
-      .reduce((sum, e) => sum + e.amount, 0),
-  });
-};
-
-export const getExpenses: RequestHandler = (_req, res) => {
-  res.json(expenses);
-};
-
-export const createExpense: RequestHandler = (req, res) => {
-  const { category, amount, description, date } = req.body;
-
-  if (!category || !amount || !description) {
-    res.status(400).json({ error: "Missing required fields" });
-    return;
+    res.json(Object.values(months));
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch monthly sales report" });
   }
-
-  const newExpense: Expense = {
-    id: Math.max(...expenses.map((e) => e.id), 0) + 1,
-    category,
-    amount: parseFloat(amount),
-    date: date || new Date().toISOString().split("T")[0],
-    description,
-    status: "pending",
-  };
-
-  expenses.push(newExpense);
-  res.status(201).json(newExpense);
 };
 
-export const updateExpenseStatus: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
+export const getFinancialSummary: RequestHandler = async (_req, res) => {
+  try {
+    const totalRevenue = await prisma.order.aggregate({
+      _sum: { totalAmount: true },
+    });
+    const totalExpenses = await prisma.expense.aggregate({
+      where: { status: "paid" },
+      _sum: { amount: true },
+    });
 
-  const expense = expenses.find((e) => e.id === parseInt(id));
+    const revenue = totalRevenue._sum.totalAmount || 0;
+    const expenses = totalExpenses._sum.amount || 0;
+    const profit = revenue - expenses;
 
-  if (!expense) {
-    res.status(404).json({ error: "Expense not found" });
-    return;
+    res.json({
+      revenue,
+      expenses,
+      profit,
+      totalRevenue: revenue,
+      totalExpenses: expenses,
+      totalProfit: profit,
+      profitMargin: revenue > 0 ? `${Math.round((profit / revenue) * 100)}%` : "0%",
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch financial summary" });
   }
-
-  expense.status = status;
-  res.json(expense);
 };
 
-export const getPaymentBreakdown: RequestHandler = (_req, res) => {
-  const reports = generateSalesReports();
-  const breakdown = {
-    cash: 0,
-    card: 0,
-    upi: 0,
-    other: 0,
-  };
-
-  reports.forEach((r) => {
-    breakdown.cash += r.paymentBreakdown.cash;
-    breakdown.card += r.paymentBreakdown.card;
-    breakdown.upi += r.paymentBreakdown.upi;
-    breakdown.other += r.paymentBreakdown.other;
-  });
-
-  res.json(breakdown);
+export const getExpenses: RequestHandler = async (_req, res) => {
+  try {
+    const expenses = await prisma.expense.findMany({
+      orderBy: { date: "desc" },
+    });
+    res.json(expenses);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch expenses" });
+  }
 };
 
-export const getTaxReport: RequestHandler = (_req, res) => {
-  const reports = generateSalesReports();
-  const totalRevenue = reports.reduce((sum, r) => sum + r.totalRevenue, 0);
-  const gstRate = 0.05; // 5% GST
-  const gstAmount = Math.round(totalRevenue * gstRate);
+export const createExpense: RequestHandler = async (req, res) => {
+  try {
+    const { category, amount, description, date } = req.body;
 
-  res.json({
-    totalRevenue,
-    gstRate: `${gstRate * 100}%`,
-    gstAmount,
-    netAmount: totalRevenue - gstAmount,
-    period: "Last 7 days",
-  });
+    if (!category || !amount || !description) {
+      res.status(400).json({ error: "Missing required fields" });
+      return;
+    }
+
+    const newExpense = await prisma.expense.create({
+      data: {
+        category,
+        amount: parseFloat(amount),
+        description,
+        date: date ? new Date(date) : undefined,
+      },
+    });
+
+    res.status(201).json(newExpense);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create expense" });
+  }
+};
+
+export const updateExpenseStatus: RequestHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const updatedExpense = await prisma.expense.update({
+      where: { id: parseInt(id) },
+      data: { status },
+    });
+
+    res.json(updatedExpense);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update expense status" });
+  }
+};
+
+export const getPaymentBreakdown: RequestHandler = async (_req, res) => {
+  try {
+    const breakdown = await prisma.order.groupBy({
+      by: ["paymentMethod"],
+      _sum: { totalAmount: true },
+    });
+
+    const result: Record<string, number> = { cash: 0, card: 0, online: 0 };
+    breakdown.forEach((b) => {
+      const method = (b.paymentMethod || "online").toLowerCase();
+      if (result[method] !== undefined) {
+        result[method] = b._sum.totalAmount || 0;
+      }
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch payment breakdown" });
+  }
+};
+
+export const getTaxReport: RequestHandler = async (_req, res) => {
+  try {
+    // Reports.tsx expects an array for charts
+    const sixMonths = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const month = d.toLocaleString("default", { month: "short" });
+
+      // Calculate data for this month only
+      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+
+      const monthRevenue = await prisma.order.aggregate({
+        where: { createdAt: { gte: monthStart, lte: monthEnd } },
+        _sum: { totalAmount: true }
+      });
+
+      const rev = monthRevenue._sum.totalAmount || 0;
+      const vat = Math.round(rev * 0.13);
+
+      sixMonths.push({
+        month,
+        taxableAmount: rev - vat,
+        vat: vat,
+        grossRevenue: rev
+      });
+    }
+
+    res.json(sixMonths);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch tax report" });
+  }
+};
+
+export const getProfitabilityReport: RequestHandler = async (_req, res) => {
+  try {
+    const menuItems = await prisma.menuItem.findMany({
+      include: {
+        recipes: {
+          include: {
+            ingredient: true
+          }
+        }
+      }
+    });
+
+    const report = menuItems.map(item => {
+      const foodCost = item.recipes.reduce((sum, r) => {
+        return sum + (r.quantity * (r.ingredient.unitPrice || 0));
+      }, 0);
+
+      const margin = item.price - foodCost;
+      const marginPercentage = item.price > 0 ? (margin / item.price) * 100 : 0;
+
+      return {
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        foodCost: Math.round(foodCost * 100) / 100,
+        margin: Math.round(margin * 100) / 100,
+        marginPercentage: Math.round(marginPercentage * 10) / 10,
+      };
+    });
+
+    res.json(report);
+  } catch (error) {
+    console.error("Profitability Analysis Error:", error);
+    res.status(500).json({ error: "Failed to fetch profitability analysis" });
+  }
 };

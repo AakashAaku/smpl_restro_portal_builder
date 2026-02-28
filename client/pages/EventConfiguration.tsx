@@ -21,6 +21,13 @@ import {
   Calendar,
   Users,
   DollarSign,
+  Leaf,
+  Sparkles,
+  PartyPopper,
+  ShieldCheck,
+  Star,
+  MapPin,
+  Clock3
 } from "lucide-react";
 import {
   getAllEventTypes,
@@ -203,550 +210,567 @@ export default function EventConfiguration() {
 
   return (
     <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Event Configuration
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Manage event types, inclusions, and bookings
-            </p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Leaf className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
+              VenzoSmart • Hospitality Management
+            </span>
           </div>
-          <Dialog open={isAddingEventType} onOpenChange={setIsAddingEventType}>
-            <DialogTrigger asChild>
-              <Button
-                className="gap-2"
-                onClick={() => {
-                  setSelectedEventType(null);
-                  setEventTypeForm({
-                    name: "",
-                    description: "",
-                    basePrice: "",
-                    minAttendees: "",
-                    maxAttendees: "",
-                  });
-                  setInclusions([]);
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                New Event Type
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-screen overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedEventType ? "Edit Event Type" : "Create Event Type"}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateEventType} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Event Type Name *</Label>
-                    <Input
-                      id="name"
-                      value={eventTypeForm.name}
-                      onChange={(e) =>
-                        setEventTypeForm({
-                          ...eventTypeForm,
-                          name: e.target.value,
-                        })
-                      }
-                      placeholder="Birthday Party"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="basePrice">Base Price (₹) *</Label>
-                    <Input
-                      id="basePrice"
-                      type="number"
-                      value={eventTypeForm.basePrice}
-                      onChange={(e) =>
-                        setEventTypeForm({
-                          ...eventTypeForm,
-                          basePrice: e.target.value,
-                        })
-                      }
-                      placeholder="10000"
-                    />
-                  </div>
-                </div>
-
+          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
+            Event <span className="text-primary italic">Architecture</span>
+          </h1>
+          <p className="text-muted-foreground mt-1 font-medium italic">
+            "Curating 110% Pure Veg & Eggless Celebrations"
+          </p>
+        </div>
+        <Dialog open={isAddingEventType} onOpenChange={setIsAddingEventType}>
+          <DialogTrigger asChild>
+            <Button
+              className="h-12 px-8 rounded-xl font-black border-none shadow-xl shadow-primary/20 gap-3 transition-all hover:scale-[1.02]"
+              onClick={() => {
+                setSelectedEventType(null);
+                setEventTypeForm({
+                  name: "",
+                  description: "",
+                  basePrice: "",
+                  minAttendees: "",
+                  maxAttendees: "",
+                });
+                setInclusions([]);
+              }}
+            >
+              <Plus className="h-5 w-5" />
+              CONSTRUCT EVENT TEMPLATE
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-screen overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedEventType ? "Edit Event Type" : "Create Event Type"}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleCreateEventType} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea
-                    id="description"
-                    value={eventTypeForm.description}
+                  <Label htmlFor="name">Event Type Name *</Label>
+                  <Input
+                    id="name"
+                    value={eventTypeForm.name}
                     onChange={(e) =>
                       setEventTypeForm({
                         ...eventTypeForm,
-                        description: e.target.value,
+                        name: e.target.value,
                       })
                     }
-                    placeholder="Event description"
-                    className="resize-none h-16"
+                    placeholder="Birthday Party"
                   />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="minAttendees">Min Attendees *</Label>
-                    <Input
-                      id="minAttendees"
-                      type="number"
-                      value={eventTypeForm.minAttendees}
-                      onChange={(e) =>
-                        setEventTypeForm({
-                          ...eventTypeForm,
-                          minAttendees: e.target.value,
-                        })
-                      }
-                      placeholder="10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="maxAttendees">Max Attendees *</Label>
-                    <Input
-                      id="maxAttendees"
-                      type="number"
-                      value={eventTypeForm.maxAttendees}
-                      onChange={(e) =>
-                        setEventTypeForm({
-                          ...eventTypeForm,
-                          maxAttendees: e.target.value,
-                        })
-                      }
-                      placeholder="100"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="basePrice">Base Price (Rs.) *</Label>
+                  <Input
+                    id="basePrice"
+                    type="number"
+                    value={eventTypeForm.basePrice}
+                    onChange={(e) =>
+                      setEventTypeForm({
+                        ...eventTypeForm,
+                        basePrice: e.target.value,
+                      })
+                    }
+                    placeholder="10000"
+                  />
                 </div>
+              </div>
 
-                <div className="border-t pt-4">
-                  <p className="font-semibold mb-4">Inclusions (What's included) *</p>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description *</Label>
+                <Textarea
+                  id="description"
+                  value={eventTypeForm.description}
+                  onChange={(e) =>
+                    setEventTypeForm({
+                      ...eventTypeForm,
+                      description: e.target.value,
+                    })
+                  }
+                  placeholder="Event description"
+                  className="resize-none h-16"
+                />
+              </div>
 
-                  <div className="space-y-4 mb-4">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="incl-name">Item Name</Label>
-                        <Input
-                          id="incl-name"
-                          value={newInclusion.name}
-                          onChange={(e) =>
-                            setNewInclusion({
-                              ...newInclusion,
-                              name: e.target.value,
-                            })
-                          }
-                          placeholder="e.g., Welcome Drinks"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="incl-description">Description</Label>
-                        <Input
-                          id="incl-description"
-                          value={newInclusion.description}
-                          onChange={(e) =>
-                            setNewInclusion({
-                              ...newInclusion,
-                              description: e.target.value,
-                            })
-                          }
-                          placeholder="Soft drinks and lassi"
-                        />
-                      </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="minAttendees">Min Attendees *</Label>
+                  <Input
+                    id="minAttendees"
+                    type="number"
+                    value={eventTypeForm.minAttendees}
+                    onChange={(e) =>
+                      setEventTypeForm({
+                        ...eventTypeForm,
+                        minAttendees: e.target.value,
+                      })
+                    }
+                    placeholder="10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxAttendees">Max Attendees *</Label>
+                  <Input
+                    id="maxAttendees"
+                    type="number"
+                    value={eventTypeForm.maxAttendees}
+                    onChange={(e) =>
+                      setEventTypeForm({
+                        ...eventTypeForm,
+                        maxAttendees: e.target.value,
+                      })
+                    }
+                    placeholder="100"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <p className="font-semibold mb-4">Inclusions (What's included) *</p>
+
+                <div className="space-y-4 mb-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="incl-name">Item Name</Label>
+                      <Input
+                        id="incl-name"
+                        value={newInclusion.name}
+                        onChange={(e) =>
+                          setNewInclusion({
+                            ...newInclusion,
+                            name: e.target.value,
+                          })
+                        }
+                        placeholder="e.g., Welcome Drinks"
+                      />
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleAddInclusion}
-                    >
-                      Add Inclusion
-                    </Button>
-
-                    {inclusions.length > 0 && (
-                      <div className="bg-secondary p-4 rounded-lg space-y-2">
-                        {inclusions.map((inclusion) => (
-                          <div
-                            key={inclusion.id}
-                            className="flex items-center justify-between p-2 bg-background rounded"
-                          >
-                            <div>
-                              <p className="font-medium">{inclusion.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {inclusion.description}
-                              </p>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveInclusion(inclusion.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="incl-description">Description</Label>
+                      <Input
+                        id="incl-description"
+                        value={newInclusion.description}
+                        onChange={(e) =>
+                          setNewInclusion({
+                            ...newInclusion,
+                            description: e.target.value,
+                          })
+                        }
+                        placeholder="Soft drinks and lassi"
+                      />
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      setIsAddingEventType(false);
-                      setSelectedEventType(null);
-                    }}
+                    onClick={handleAddInclusion}
                   >
-                    Cancel
+                    Add Inclusion
                   </Button>
-                  <Button type="submit">
-                    {selectedEventType ? "Update Type" : "Create Type"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Bookings</p>
-                  <p className="text-2xl font-bold mt-2">{stats.totalBookings}</p>
-                </div>
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Pending</p>
-                  <p className="text-2xl font-bold mt-2 text-amber-600">
-                    {stats.pendingBookings}
-                  </p>
-                </div>
-                <Clock className="h-6 w-6 text-amber-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Confirmed</p>
-                  <p className="text-2xl font-bold mt-2 text-green-600">
-                    {stats.confirmedBookings}
-                  </p>
-                </div>
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Revenue</p>
-                  <p className="text-2xl font-bold mt-2">
-                    ₹{Math.round(stats.totalRevenue).toLocaleString()}
-                  </p>
-                </div>
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Today</p>
-                  <p className="text-2xl font-bold mt-2">{stats.todayBookings}</p>
-                </div>
-                <Calendar className="h-6 w-6 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="types" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="types">Event Types</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-          </TabsList>
-
-          {/* Event Types Tab */}
-          <TabsContent value="types" className="space-y-4">
-            {eventTypes.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No event types created</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {eventTypes.map((eventType) => (
-                  <Card key={eventType.id}>
-                    <CardHeader>
-                      <CardTitle className="flex items-start justify-between">
-                        <div>
-                          <p className="text-lg">{eventType.name}</p>
-                          <p className="text-sm font-normal text-muted-foreground mt-1">
-                            {eventType.description.substring(0, 60)}...
-                          </p>
-                        </div>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Base Price</p>
-                          <p className="font-semibold">
-                            ₹{eventType.basePrice.toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Capacity</p>
-                          <p className="font-semibold">
-                            {eventType.minAttendees}-{eventType.maxAttendees}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-sm font-semibold mb-2">Inclusions:</p>
-                        <ul className="text-xs space-y-1">
-                          {eventType.inclusions.map((inc) => (
-                            <li key={inc.id} className="text-muted-foreground">
-                              • {inc.name}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => handleEditEventType(eventType)}
+                  {inclusions.length > 0 && (
+                    <div className="bg-secondary p-4 rounded-lg space-y-2">
+                      {inclusions.map((inclusion) => (
+                        <div
+                          key={inclusion.id}
+                          className="flex items-center justify-between p-2 bg-background rounded"
                         >
-                          <Edit2 className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                "Delete this event type?"
-                              )
-                            ) {
-                              deleteEventType(eventType.id);
-                              loadData();
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Bookings Tab */}
-          <TabsContent value="bookings" className="space-y-4">
-            {bookings.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No bookings yet</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-medium">
-                        Customer
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium">
-                        Event Type
-                      </th>
-                      <th className="text-right py-3 px-4 font-medium">
-                        Attendees
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium">
-                        Event Date
-                      </th>
-                      <th className="text-right py-3 px-4 font-medium">Price</th>
-                      <th className="text-center py-3 px-4 font-medium">Status</th>
-                      <th className="text-center py-3 px-4 font-medium">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...bookings].reverse().map((booking) => (
-                      <tr
-                        key={booking.id}
-                        className="border-b border-border hover:bg-secondary/30"
-                      >
-                        <td className="py-3 px-4">
                           <div>
-                            <p className="font-medium">{booking.customerName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {booking.customerPhone}
+                            <p className="font-medium">{inclusion.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {inclusion.description}
                             </p>
                           </div>
-                        </td>
-                        <td className="py-3 px-4">{booking.eventTypeName}</td>
-                        <td className="text-right py-3 px-4">
-                          {booking.estimatedAttendees}
-                        </td>
-                        <td className="py-3 px-4">
-                          {new Date(booking.eventDate).toLocaleDateString()}
-                        </td>
-                        <td className="text-right py-3 px-4 font-semibold">
-                          ₹{booking.totalPrice.toLocaleString()}
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              booking.status === "confirmed"
-                                ? "bg-green-100 text-green-800"
-                                : booking.status === "pending"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-gray-100 text-gray-800"
-                            }`}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveInclusion(inclusion.id)}
                           >
-                            {booking.status}
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          {booking.status === "pending" && (
-                            <div className="flex gap-2 justify-center">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  handleBookingAction(booking, "confirm")
-                                }
-                              >
-                                Confirm
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() =>
-                                  handleBookingAction(booking, "cancel")
-                                }
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          )}
-                          {booking.status === "confirmed" && (
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddingEventType(false);
+                    setSelectedEventType(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {selectedEventType ? "Update Type" : "Create Type"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Bookings</p>
+                <p className="text-2xl font-black mt-1 text-sidebar-foreground">{stats.totalBookings}</p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
+                <Users className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Queue</p>
+                <p className="text-2xl font-black mt-1 text-amber-600">
+                  {stats.pendingBookings}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+                <Clock3 className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Confirmed</p>
+                <p className="text-2xl font-black mt-1 text-emerald-600">
+                  {stats.confirmedBookings}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Revenue</p>
+                <p className="text-2xl font-black mt-1 text-sidebar-foreground">
+                  Rs.{Math.round(stats.totalRevenue).toLocaleString()}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm">
+                <DollarSign className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Daily Cap</p>
+                <p className="text-2xl font-black mt-1 text-primary">{stats.todayBookings}</p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
+                <Star className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="types" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="types">Event Types</TabsTrigger>
+          <TabsTrigger value="bookings">Bookings</TabsTrigger>
+        </TabsList>
+
+        {/* Event Types Tab */}
+        <TabsContent value="types" className="space-y-4">
+          {eventTypes.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No event types created</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {eventTypes.map((eventType) => (
+                <Card key={eventType.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-start justify-between">
+                      <div>
+                        <p className="text-lg">{eventType.name}</p>
+                        <p className="text-sm font-normal text-muted-foreground mt-1">
+                          {eventType.description.substring(0, 60)}...
+                        </p>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Base Price</p>
+                        <p className="font-semibold">
+                          ₹{eventType.basePrice.toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Capacity</p>
+                        <p className="font-semibold">
+                          {eventType.minAttendees}-{eventType.maxAttendees}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-semibold mb-2">Inclusions:</p>
+                      <ul className="text-xs space-y-1">
+                        {eventType.inclusions.map((inc) => (
+                          <li key={inc.id} className="text-muted-foreground">
+                            • {inc.name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleEditEventType(eventType)}
+                      >
+                        <Edit2 className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Delete this event type?"
+                            )
+                          ) {
+                            deleteEventType(eventType.id);
+                            loadData();
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Bookings Tab */}
+        <TabsContent value="bookings" className="space-y-4">
+          {bookings.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No bookings yet</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 font-medium">
+                      Customer
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium">
+                      Event Type
+                    </th>
+                    <th className="text-right py-3 px-4 font-medium">
+                      Attendees
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium">
+                      Event Date
+                    </th>
+                    <th className="text-right py-3 px-4 font-medium">Price</th>
+                    <th className="text-center py-3 px-4 font-medium">Status</th>
+                    <th className="text-center py-3 px-4 font-medium">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...bookings].reverse().map((booking) => (
+                    <tr
+                      key={booking.id}
+                      className="border-b border-border hover:bg-secondary/30"
+                    >
+                      <td className="py-3 px-4">
+                        <div>
+                          <p className="font-medium">{booking.customerName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {booking.customerPhone}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">{booking.eventTypeName}</td>
+                      <td className="text-right py-3 px-4">
+                        {booking.estimatedAttendees}
+                      </td>
+                      <td className="py-3 px-4">
+                        {new Date(booking.eventDate).toLocaleDateString()}
+                      </td>
+                      <td className="text-right py-3 px-4 font-semibold">
+                        ₹{booking.totalPrice.toLocaleString()}
+                      </td>
+                      <td className="text-center py-3 px-4">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${booking.status === "confirmed"
+                            ? "bg-green-100 text-green-800"
+                            : booking.status === "pending"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-gray-100 text-gray-800"
+                            }`}
+                        >
+                          {booking.status}
+                        </span>
+                      </td>
+                      <td className="text-center py-3 px-4">
+                        {booking.status === "pending" && (
+                          <div className="flex gap-2 justify-center">
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                setIsViewingBooking(true);
-                              }}
+                              onClick={() =>
+                                handleBookingAction(booking, "confirm")
+                              }
                             >
-                              Details
+                              Confirm
                             </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() =>
+                                handleBookingAction(booking, "cancel")
+                              }
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                        )}
+                        {booking.status === "confirmed" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setIsViewingBooking(true);
+                            }}
+                          >
+                            Details
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Booking Details Dialog */}
+      <Dialog open={isViewingBooking} onOpenChange={setIsViewingBooking}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Booking Details</DialogTitle>
+          </DialogHeader>
+          {selectedBooking && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Customer</p>
+                  <p className="font-semibold">{selectedBooking.customerName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Phone</p>
+                  <p className="font-semibold">{selectedBooking.customerPhone}</p>
+                </div>
               </div>
-            )}
-          </TabsContent>
-        </Tabs>
 
-        {/* Booking Details Dialog */}
-        <Dialog open={isViewingBooking} onOpenChange={setIsViewingBooking}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Booking Details</DialogTitle>
-            </DialogHeader>
-            {selectedBooking && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Customer</p>
-                    <p className="font-semibold">{selectedBooking.customerName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-semibold">{selectedBooking.customerPhone}</p>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Event Type</p>
+                  <p className="font-semibold">{selectedBooking.eventTypeName}</p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Event Type</p>
-                    <p className="font-semibold">{selectedBooking.eventTypeName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Event Date</p>
-                    <p className="font-semibold">
-                      {new Date(selectedBooking.eventDate).toLocaleDateString()}
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Event Date</p>
+                  <p className="font-semibold">
+                    {new Date(selectedBooking.eventDate).toLocaleDateString()}
+                  </p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Attendees</p>
-                    <p className="font-semibold">{selectedBooking.estimatedAttendees}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Price</p>
-                    <p className="font-semibold">
-                      ₹{selectedBooking.totalPrice.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {selectedBooking.specialRequirements && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Special Requirements
-                    </p>
-                    <p className="mt-1">{selectedBooking.specialRequirements}</p>
-                  </div>
-                )}
               </div>
-            )}
-          </DialogContent>
-        </Dialog>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Attendees</p>
+                  <p className="font-semibold">{selectedBooking.estimatedAttendees}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Price</p>
+                  <p className="font-semibold">
+                    ₹{selectedBooking.totalPrice.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {selectedBooking.specialRequirements && (
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Special Requirements
+                  </p>
+                  <p className="mt-1">{selectedBooking.specialRequirements}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

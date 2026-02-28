@@ -20,9 +20,11 @@ import {
   TrendingUp,
   Zap,
   Calendar,
+  Layout,
+  Leaf,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { logout } from "@/lib/auth";
+import { logout, getAuth, isAdmin } from "@/lib/auth";
 
 const navSections = [
   {
@@ -30,6 +32,7 @@ const navSections = [
     items: [
       { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { href: "/admin/orders", icon: ClipboardList, label: "Orders" },
+      { href: "/admin/kitchen-display", icon: ChefHat, label: "Kitchen Ticker" },
       { href: "/admin/tables", icon: TableProperties, label: "Table Management" },
       { href: "/admin/table-qr-codes", icon: QrCode, label: "Table QR Codes" },
       { href: "/admin/events", icon: Calendar, label: "Event Configuration" },
@@ -57,7 +60,14 @@ const navSections = [
       { href: "/admin/accounting", icon: Wallet, label: "Accounting" },
       { href: "/admin/bills", icon: Receipt, label: "Bills & Invoices" },
       { href: "/admin/reports", icon: BarChart3, label: "Reports" },
+      { href: "/admin/assets", icon: Layout, label: "Asset Management" },
       { href: "/admin/promotions", icon: Gift, label: "Promotions" },
+    ],
+  },
+  {
+    title: "Kitchen Operations",
+    items: [
+      { href: "/admin/requisition", icon: ClipboardList, label: "Requisitions" },
     ],
   },
   {
@@ -73,28 +83,69 @@ const navSections = [
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const location = useLocation();
 
+  const { role } = getAuth() || { role: "" };
+  const isAdminUser = isAdmin();
+
+  // Filter sections based on role
+  const filteredSections = navSections.map(section => {
+    const filteredItems = section.items.filter(item => {
+      // Admin sees everything
+      if (isAdminUser) return true;
+
+      // Chef role specific access
+      if (role === "CHEF" || role === "chef") {
+        const chefAllowed = [
+          "/admin/dashboard",
+          "/admin/orders",
+          "/admin/kitchen-display",
+          "/admin/menu",
+          "/admin/inventory",
+          "/admin/requisition"
+        ];
+        return chefAllowed.includes(item.href);
+      }
+
+      // Other staff see basic operations
+      const staffAllowed = [
+        "/admin/dashboard",
+        "/admin/orders",
+        "/admin/kitchen-display",
+        "/admin/tables"
+      ];
+      return staffAllowed.includes(item.href);
+    });
+
+    return { ...section, items: filteredItems };
+  }).filter(section => section.items.length > 0);
+
   return (
     <aside className="h-full w-64 border-r border-sidebar-border bg-sidebar shadow-sm overflow-y-auto">
       {/* Logo */}
-      <div className="border-b border-sidebar-border px-6 py-8">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-lg shadow-sm">
-            🍽️
+      <div className="border-b border-sidebar-border px-6 py-10 bg-gradient-to-b from-sidebar to-sidebar/50">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-green-500 text-white shadow-lg organic-glow">
+            <Leaf className="h-10 w-10" />
           </div>
           <div>
-            <h1 className="font-bold text-sidebar-foreground text-lg tracking-tight">
-              VenzoSmart
+            <h1 className="font-extrabold text-sidebar-foreground text-2xl tracking-tighter">
+              VENZO<span className="text-primary">SMART</span>
             </h1>
-            <p className="text-xs text-sidebar-foreground/60">Admin Portal</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70 mt-1">
+              110% Pure Veg & Eggless
+            </p>
+            <p className="text-xs text-sidebar-foreground/50 mt-2 flex items-center justify-center gap-1">
+              <span className="h-1 w-1 rounded-full bg-emerald-400" />
+              Radhe Radhe, Bhaktapur
+            </p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
-        {navSections.map((section) => (
-          <div key={section.title} className="space-y-2">
-            <p className="px-4 text-xs font-semibold text-sidebar-foreground/60 uppercase tracking-wider">
+      <nav className="flex-1 overflow-y-auto px-4 py-8 space-y-8">
+        {filteredSections.map((section) => (
+          <div key={section.title} className="space-y-3">
+            <p className="px-4 text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-[0.15em]">
               {section.title}
             </p>
             <div className="space-y-1">
@@ -107,13 +158,16 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                     key={item.href}
                     to={item.href}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors",
+                      "group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200",
                       isActive
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/10"
+                        ? "bg-primary text-primary-foreground shadow-md ring-1 ring-primary/20 scale-[1.02]"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-primary hover:translate-x-1"
                     )}
                   >
-                    <Icon className="h-5 w-5" />
+                    <Icon className={cn(
+                      "h-5 w-5 transition-transform duration-200 group-hover:scale-110",
+                      isActive ? "text-primary-foreground" : "text-primary/60"
+                    )} />
                     {item.label}
                   </Link>
                 );

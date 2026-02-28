@@ -1,3 +1,5 @@
+import { api } from './api-client';
+
 export interface MenuItem {
     id: number;
     name: string;
@@ -8,44 +10,41 @@ export interface MenuItem {
     status: "available" | "unavailable";
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-const API_BASE = `${API_URL}/menu`;
+export interface Recipe {
+    id: number;
+    menuItemId: number;
+    ingredientId: number;
+    quantity: number;
+    ingredient?: {
+        name: string;
+        unit: string;
+    }
+}
 
 export const getMenuItems = async (): Promise<MenuItem[]> => {
-    const response = await fetch(API_BASE);
-    if (!response.ok) throw new Error("Failed to fetch menu items");
-    return response.json();
+    return api.get("/menu");
 };
 
 export const getMenuCategories = async (): Promise<string[]> => {
-    const response = await fetch(`${API_BASE}/categories`);
-    if (!response.ok) throw new Error("Failed to fetch categories");
-    return response.json();
+    return api.get("/menu/categories");
 };
 
 export const createMenuItem = async (item: Omit<MenuItem, "id">): Promise<MenuItem> => {
-    const response = await fetch(API_BASE, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(item),
-    });
-    if (!response.ok) throw new Error("Failed to create menu item");
-    return response.json();
+    return api.post("/menu", item);
 };
 
 export const updateMenuItem = async (id: number, item: Partial<MenuItem>): Promise<MenuItem> => {
-    const response = await fetch(`${API_BASE}/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(item),
-    });
-    if (!response.ok) throw new Error("Failed to update menu item");
-    return response.json();
+    return api.put(`/menu/${id}`, item);
 };
 
 export const deleteMenuItem = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE}/${id}`, {
-        method: "DELETE",
-    });
-    if (!response.ok) throw new Error("Failed to delete menu item");
+    return api.delete(`/menu/${id}`);
+};
+
+export const getMenuItemRecipe = async (menuItemId: number): Promise<Recipe[]> => {
+    return api.get(`/menu/${menuItemId}/recipe`);
+};
+
+export const updateMenuItemRecipe = async (menuItemId: number, ingredients: { ingredientId: number, quantity: number }[]): Promise<void> => {
+    return api.put(`/menu/${menuItemId}/recipe`, { ingredients });
 };
