@@ -480,7 +480,7 @@ export default function Reports() {
               <CardContent className="pt-6">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Taxable Amount</p>
-                  <p className="text-3xl font-bold mt-2">Rs.{(vatData.reduce((sum, item) => sum + item.taxableAmount, 0) / 100000).toFixed(2)}L</p>
+                  <p className="text-3xl font-bold mt-2">Rs.{((vatData || []).reduce((sum, item) => sum + item.taxableAmount, 0) / 100000).toFixed(2)}L</p>
                 </div>
               </CardContent>
             </Card>
@@ -489,7 +489,7 @@ export default function Reports() {
               <CardContent className="pt-6">
                 <div>
                   <p className="text-sm text-muted-foreground">Total VAT Collected</p>
-                  <p className="text-3xl font-bold mt-2 text-green-600">Rs.{(vatData.reduce((sum, item) => sum + item.vat, 0) / 1000).toFixed(0)}K</p>
+                  <p className="text-3xl font-bold mt-2 text-green-600">Rs.{((vatData || []).reduce((sum, item) => sum + item.vat, 0) / 1000).toFixed(0)}K</p>
                 </div>
               </CardContent>
             </Card>
@@ -510,7 +510,7 @@ export default function Reports() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={vatData}>
+                <LineChart data={vatData || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
@@ -551,12 +551,12 @@ export default function Reports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {vatData.map((item) => (
+                    {vatData?.map((item: any) => (
                       <tr key={item.month} className="border-b border-border hover:bg-secondary/30">
                         <td className="py-4 px-4 font-medium">{item.month}</td>
-                        <td className="py-4 px-4">Rs.{item.taxableAmount.toLocaleString()}</td>
-                        <td className="py-4 px-4 font-semibold text-green-600">Rs.{item.vat.toLocaleString()}</td>
-                        <td className="py-4 px-4">Rs.{item.grossRevenue.toLocaleString()}</td>
+                        <td className="py-4 px-4">Rs.{item.taxableAmount?.toLocaleString() || 0}</td>
+                        <td className="py-4 px-4 font-semibold text-green-600">Rs.{item.vat?.toLocaleString() || 0}</td>
+                        <td className="py-4 px-4">Rs.{item.grossRevenue?.toLocaleString() || 0}</td>
                       </tr>
                     ))}
                   </tbody>

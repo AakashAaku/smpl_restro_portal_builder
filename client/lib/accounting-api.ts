@@ -4,8 +4,8 @@ export interface FinancialSummary {
     revenue: number;
     expenses: number;
     profit: number;
-    profitMargin: string;
-    growth: string;
+    profitMargin: number;
+    growth: number;
 }
 
 export interface SalesReport {

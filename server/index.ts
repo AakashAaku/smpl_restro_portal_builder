@@ -62,6 +62,8 @@ import {
 import {
   getPurchases,
   recordPurchase,
+  updatePurchase,
+  deletePurchase,
   getPurchaseStats,
   getPurchasesByIngredient,
 } from "./routes/purchases";
@@ -186,6 +188,8 @@ export function createServer() {
   app.get("/api/purchases/stats", authenticateJWT, getPurchaseStats);
   app.get("/api/purchases/ingredient/:ingredientId", authenticateJWT, getPurchasesByIngredient);
   app.post("/api/purchases", authenticateJWT, recordPurchase);
+  app.put("/api/purchases/:id", authenticateJWT, updatePurchase);
+  app.delete("/api/purchases/:id", authenticateJWT, deletePurchase);
 
   // Finished Goods & Production Routes
   app.get("/api/finished-goods", authenticateJWT, getFinishedGoods);

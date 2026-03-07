@@ -6,56 +6,44 @@
 @tailwind utilities;
 
 @layer base {
-
-  /**
-   * Tailwind CSS theme
-   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
-   * A different format will require also updating the theme in tailwind.config.ts.
-  */
   :root {
-    --background: 140 20% 98%;
-    /* Soft sage tint */
-    --foreground: 140 50% 10%;
+    --background: 140 30% 99%;
+    --foreground: 154 50% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 140 50% 10%;
+    --card-foreground: 154 50% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 140 50% 10%;
-    --primary: 154 60% 30%;
-    /* Deep Forest/Emerald */
+    --popover-foreground: 154 50% 12%;
+    --primary: 154 60% 25%;
     --primary-foreground: 154 20% 98%;
-    --secondary: 140 30% 95%;
-    /* Light Sage Wash */
-    --secondary-foreground: 154 60% 20%;
+    --secondary: 140 40% 96%;
+    --secondary-foreground: 154 60% 15%;
     --muted: 140 20% 94%;
-    --muted-foreground: 140 10% 40%;
-    --accent: 154 50% 45%;
-    /* Leaf Green */
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84.2% 60.2%;
+    --muted-foreground: 140 10% 35%;
+    --accent: 45 60% 50%;
+    --accent-foreground: 154 60% 10%;
+    --destructive: 0 84.2% 45%;
     --destructive-foreground: 210 40% 98%;
-    --border: 140 20% 90%;
-    --input: 140 20% 90%;
-    --ring: 154 60% 30%;
-    --radius: 1rem;
+    --border: 140 15% 90%;
+    --input: 140 15% 90%;
+    --ring: 154 60% 25%;
+    --radius: 1.25rem;
 
-    /* Sidebar specific */
-    --sidebar: 140 20% 97%;
-    --sidebar-foreground: 140 40% 15%;
-    --sidebar-primary: 154 60% 30%;
+    --sidebar: 140 25% 98%;
+    --sidebar-foreground: 154 40% 15%;
+    --sidebar-primary: 154 60% 25%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 154 40% 90%;
-    --sidebar-accent-foreground: 154 60% 20%;
-    --sidebar-border: 140 20% 88%;
-    --sidebar-ring: 154 60% 30%;
+    --sidebar-accent: 154 40% 92%;
+    --sidebar-accent-foreground: 154 60% 15%;
+    --sidebar-border: 140 15% 90%;
+    --sidebar-ring: 154 60% 25%;
   }
 
   .dark {
-    --sidebar-border: 225 15% 25%;
-    --sidebar-ring: 25 95% 60%;
+    --background: 140 20% 10%;
+    --foreground: 140 20% 95%;
+    --primary: 154 60% 45%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
@@ -66,15 +54,19 @@
   }
 
   .glass {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+    @apply bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl;
   }
 
   .organic-glow {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.08), 0 0 20px rgba(212, 175, 55, 0.05);
   }
 
   .premium-card {
-    @apply rounded-2xl border border-emerald-100/50 bg-white shadow-sm hover:shadow-md transition-all duration-300;
+    @apply rounded-3xl border border-emerald-100/40 bg-white/90 shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1 backdrop-blur-sm;
+  }
+
+  .btn-premium {
+    @apply shadow-md hover:shadow-lg transition-all active:scale-95;
   }
 
   :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
@@ -84,6 +76,7 @@
 
   pre,
   code {
+    @apply bg-secondary/50 rounded-lg p-4 font-mono text-sm;
     overflow-x: auto;
     white-space: pre;
   }

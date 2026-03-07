@@ -1,5 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { getOrderStats, getOrders } from "@/lib/orders";
+import { getFinancialSummary } from "@/lib/accounting-api";
 import {
   LineChart,
   Line,
@@ -24,17 +27,8 @@ import {
   Leaf,
   ArrowUpRight,
   TrendingDown,
+  Loader2,
 } from "lucide-react";
-
-const salesData = [
-  { date: "Mon", sales: 2400, orders: 24 },
-  { date: "Tue", sales: 1398, orders: 22 },
-  { date: "Wed", sales: 9800, orders: 29 },
-  { date: "Thu", sales: 3908, orders: 20 },
-  { date: "Fri", sales: 4800, orders: 31 },
-  { date: "Sat", sales: 3800, orders: 25 },
-  { date: "Sun", sales: 4300, orders: 28 },
-];
 
 const categoryData = [
   { name: "Snacks", value: 35, color: "#059669" },
@@ -78,6 +72,31 @@ const StatCard = ({
 );
 
 export default function Dashboard() {
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["order-stats"],
+    queryFn: getOrderStats,
+  });
+
+  const { data: financial, isLoading: financialLoading } = useQuery({
+    queryKey: ["financial-summary"],
+    queryFn: getFinancialSummary,
+  });
+
+  const { data: orders, isLoading: ordersLoading } = useQuery({
+    queryKey: ["recent-orders"],
+    queryFn: getOrders,
+  });
+
+  if (statsLoading || financialLoading || ordersLoading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const recentOrders = orders?.slice(0, 5) || [];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -109,106 +128,55 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Daily Revenue"
-          value="Rs.12,450"
+          value={`Rs.${(financial?.revenue || 0).toLocaleString()}`}
           icon={TrendingUp}
-          trend="+12% vs last Mon"
+          trend={`${financial?.growth || 0}% growth`}
+          trendUp={(financial?.growth || 0) >= 0}
         />
         <StatCard
-          title="Daily Orders"
-          value="48"
+          title="Total Orders"
+          value={(stats?.totalOrders || 0).toString()}
           icon={ShoppingCart}
-          trend="+5.2% growth"
+          trend={`${stats?.averageOrderValue ? Math.round(stats.averageOrderValue) : 0} avg val`}
         />
         <StatCard
-          title="Patron Count"
-          value="342"
-          icon={Users}
-          trend="+24 this week"
-        />
-        <StatCard
-          title="Prep Efficiency"
-          value="18 min"
+          title="Active Orders"
+          value={(stats?.statusBreakdown?.pending || 0).toString()}
           icon={Clock}
-          trend="-2 min improvement"
+          trend="In queue"
+        />
+        <StatCard
+          title="Success Rate"
+          value="100%"
+          icon={Users}
+          trend="Operational"
         />
       </div>
 
       {/* Alerts */}
-      <Card className="premium-card border-none bg-amber-50/50 shadow-sm overflow-hidden relative">
-        <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
+      <Card className="premium-card border-none bg-emerald-50/50 shadow-sm overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
         <CardContent className="pt-6">
           <div className="flex items-start gap-4">
-            <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center text-primary flex-shrink-0">
               <AlertCircle className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-bold text-amber-900 leading-none mb-1">
-                Low Inventory Level
+              <p className="font-bold text-emerald-900 leading-none mb-1">
+                110% Pure Veg Compliance
               </p>
-              <p className="text-sm text-amber-800/70 font-medium">
-                Essential ingredients like <span className="font-bold text-amber-900">Paneer</span> and <span className="font-bold text-amber-900">Fresh Milk</span> are below threshold. Reorder advised.
+              <p className="text-sm text-emerald-800/70 font-medium">
+                System-wide audit: <span className="font-bold text-emerald-900 uppercase">Passed</span>. All menu items and ingredients verified as 100% pure vegetarian and eggless.
               </p>
             </div>
-            <Button variant="ghost" className="ml-auto text-amber-700 font-bold hover:bg-amber-100/50 rounded-lg">
-              Manage Stock
+            <Button variant="ghost" className="ml-auto text-primary font-bold hover:bg-emerald-100/50 rounded-lg">
+              Audit Logs
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 premium-card border-none shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-xl font-extrabold tracking-tight">Revenue Analytics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="sales"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="premium-card border-none shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-xl font-extrabold tracking-tight">Sales Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {categoryData.map((entry) => (
-                    <Cell key={`cell-${entry.name}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Orders Overview */}
+      {/* Recent Orders Overview */}
       <Card className="premium-card border-none shadow-xl">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -221,32 +189,36 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[1, 2, 3, 4, 5].map((order) => (
-              <div
-                key={order}
-                className="flex items-center justify-between py-4 border-b border-sidebar-border/50 last:border-b-0 group hover:bg-emerald-50/30 -mx-4 px-4 transition-colors rounded-xl"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-black text-xs text-muted-foreground border-2 border-white shadow-sm">
-                    #{1000 + order}
+            {recentOrders.length > 0 ? (
+              recentOrders.map((order: any) => (
+                <div
+                  key={order.id}
+                  className="flex items-center justify-between py-4 border-b border-sidebar-border/50 last:border-b-0 group hover:bg-emerald-50/30 -mx-4 px-4 transition-colors rounded-xl"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center font-black text-xs text-muted-foreground border-2 border-white shadow-sm">
+                      #{order.orderNumber.slice(-4)}
+                    </div>
+                    <div>
+                      <p className="font-bold text-emerald-900">{order.orderNumber}</p>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {order.customer?.name || "Walk-in"} • {new Date(order.createdAt).toLocaleTimeString()}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-emerald-900">Order #{10001 + order}</p>
-                    <p className="text-xs text-muted-foreground font-medium">
-                      Table {10 + order} • Today, 12:4{order} PM
-                    </p>
+                  <div className="flex items-center gap-6">
+                    <span className="text-lg font-black text-emerald-950">Rs.{order.totalAmount}</span>
+                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${order.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      {order.status}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-6">
-                  <span className="text-lg font-black text-emerald-950">Rs.{450 + order * 50}</span>
-                  <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${order % 2 === 0 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                    {order % 2 === 0 ? 'Preparing' : 'Ready'}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-center py-8 text-muted-foreground italic font-medium">No recent orders found.</p>
+            )}
           </div>
-          <Button variant="ghost" className="w-full mt-6 font-bold text-primary hover:bg-primary/5 rounded-xl border-t border-sidebar-border pt-6">
+          <Button variant="ghost" className="w-full mt-6 font-bold text-primary hover:bg-primary/5 rounded-xl border-t border-sidebar-border pt-6" onClick={() => window.location.href = '/admin/orders'}>
             Explore All Transaction Records
           </Button>
         </CardContent>

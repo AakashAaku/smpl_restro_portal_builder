@@ -18,11 +18,13 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
-import { Plus, TrendingUp, DollarSign, Package, Calendar, Loader2, Leaf, History, Sparkles, Filter } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, Package, Calendar, Loader2, Leaf, History, Sparkles, Filter, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   getPurchases,
   recordPurchase,
+  updatePurchase,
+  deletePurchase,
   getPurchaseStats,
   type Purchase
 } from "@/lib/purchase-api";
@@ -37,6 +39,8 @@ export default function PurchaseManagement() {
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingPurchase, setIsAddingPurchase] = useState(false);
+  const [isEditingPurchase, setIsEditingPurchase] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedIngredient, setSelectedIngredient] = useState("");
   const [formData, setFormData] = useState({
     quantity: "",
@@ -69,6 +73,50 @@ export default function PurchaseManagement() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDeletePurchase = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this purchase? This will reverse the stock increment.")) return;
+    try {
+      await deletePurchase(id);
+      toast.success("Purchase deleted and stock reversed");
+      loadData();
+    } catch (error) {
+      toast.error("Failed to delete purchase");
+    }
+  };
+
+  const handleUpdatePurchase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await updatePurchase(editingId, {
+        ...formData,
+        quantity: parseFloat(formData.quantity),
+        unitPrice: parseFloat(formData.unitPrice),
+        ingredientId: parseInt(selectedIngredient)
+      });
+      toast.success("Purchase updated and stock adjusted");
+      setIsEditingPurchase(false);
+      loadData();
+    } catch (error) {
+      toast.error("Failed to update purchase");
+    }
+  };
+
+  const openEditDialog = (purchase: Purchase) => {
+    setEditingId(purchase.id);
+    setSelectedIngredient(purchase.ingredientId.toString());
+    setFormData({
+      quantity: purchase.quantity.toString(),
+      unitPrice: purchase.unitPrice.toString(),
+      supplier: purchase.supplier,
+      purchaseDate: purchase.purchaseDate.split("T")[0],
+      expiryDate: purchase.expiryDate ? purchase.expiryDate.split("T")[0] : "",
+      invoiceNo: purchase.invoiceNo || "",
+      notes: purchase.notes || "",
+    });
+    setIsEditingPurchase(true);
   };
 
   const handleAddPurchase = async (e: React.FormEvent) => {
@@ -112,8 +160,8 @@ export default function PurchaseManagement() {
       });
       setSelectedIngredient("");
       loadData();
-    } catch (error) {
-      toast.error("Failed to record purchase");
+    } catch (error: any) {
+      toast.error(`Failed to record purchase: ${error.message || "Unknown error"}`);
     }
   };
 
@@ -286,6 +334,118 @@ export default function PurchaseManagement() {
             </form>
           </DialogContent>
         </Dialog>
+        <Dialog open={isEditingPurchase} onOpenChange={setIsEditingPurchase}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Purchase Record</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleUpdatePurchase} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-material">Raw Material *</Label>
+                <Select value={selectedIngredient} onValueChange={setSelectedIngredient}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select raw material" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ingredients.map((ingredient) => (
+                      <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
+                        {ingredient.name} ({ingredient.unit})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-quantity">Quantity *</Label>
+                  <Input
+                    id="edit-quantity"
+                    type="number"
+                    step="0.01"
+                    value={formData.quantity}
+                    onChange={(e) =>
+                      setFormData({ ...formData, quantity: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-unitPrice">Unit Price (Rs.) *</Label>
+                  <Input
+                    id="edit-unitPrice"
+                    type="number"
+                    step="0.01"
+                    value={formData.unitPrice}
+                    onChange={(e) =>
+                      setFormData({ ...formData, unitPrice: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-supplier">Supplier *</Label>
+                <Input
+                  id="edit-supplier"
+                  value={formData.supplier}
+                  onChange={(e) =>
+                    setFormData({ ...formData, supplier: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-purchaseDate">Purchase Date *</Label>
+                  <Input
+                    id="edit-purchaseDate"
+                    type="date"
+                    value={formData.purchaseDate}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        purchaseDate: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-expiryDate">Expiry Date</Label>
+                  <Input
+                    id="edit-expiryDate"
+                    type="date"
+                    value={formData.expiryDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, expiryDate: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-invoiceNo">Invoice No.</Label>
+                <Input
+                  id="edit-invoiceNo"
+                  value={formData.invoiceNo}
+                  onChange={(e) =>
+                    setFormData({ ...formData, invoiceNo: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditingPurchase(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Update Record</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats */}
@@ -398,6 +558,7 @@ export default function PurchaseManagement() {
                         <th className="text-left py-3 px-4 font-medium">Supplier</th>
                         <th className="text-left py-3 px-4 font-medium">Date</th>
                         <th className="text-left py-3 px-4 font-medium">Expiry</th>
+                        <th className="text-right py-3 px-4 font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -437,6 +598,26 @@ export default function PurchaseManagement() {
                             ) : (
                               <span className="text-[10px] font-bold text-muted-foreground/40">NO EXPIRY</span>
                             )}
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => openEditDialog(purchase)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                onClick={() => handleDeletePurchase(purchase.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}

@@ -22,8 +22,9 @@ export default function Login() {
     try {
       const user = await login(email, password);
 
-      // Redirect based on role
-      if (user.role === "admin") {
+      // Redirect based on role (case-insensitive check)
+      const userRole = user.role.toLowerCase();
+      if (userRole === "admin") {
         navigate("/admin/dashboard");
       } else {
         navigate("/customer/home");

@@ -88,6 +88,26 @@ export const getFinancialSummary: RequestHandler = async (_req, res) => {
     const expenses = totalExpenses._sum.amount || 0;
     const profit = revenue - expenses;
 
+    // Calculate growth (Mock comparison for now based on last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+    const prevMonthRevenue = await prisma.order.aggregate({
+      where: { createdAt: { gte: sixtyDaysAgo, lte: thirtyDaysAgo } },
+      _sum: { totalAmount: true },
+    });
+
+    const currMonthRevenue = await prisma.order.aggregate({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+      _sum: { totalAmount: true },
+    });
+
+    const prevRev = prevMonthRevenue._sum.totalAmount || 0;
+    const currRev = currMonthRevenue._sum.totalAmount || 0;
+    const growth = prevRev > 0 ? ((currRev - prevRev) / prevRev) * 100 : 100;
+
     res.json({
       revenue,
       expenses,
@@ -95,7 +115,8 @@ export const getFinancialSummary: RequestHandler = async (_req, res) => {
       totalRevenue: revenue,
       totalExpenses: expenses,
       totalProfit: profit,
-      profitMargin: revenue > 0 ? `${Math.round((profit / revenue) * 100)}%` : "0%",
+      profitMargin: revenue > 0 ? Math.round((profit / revenue) * 100) : 0,
+      growth: Math.round(growth),
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch financial summary" });
@@ -160,11 +181,17 @@ export const getPaymentBreakdown: RequestHandler = async (_req, res) => {
       _sum: { totalAmount: true },
     });
 
-    const result: Record<string, number> = { cash: 0, card: 0, online: 0 };
+    const result = [
+      { name: "Cash", value: 0, color: "#10B981" },
+      { name: "Card", value: 0, color: "#3B82F6" },
+      { name: "Online", value: 0, color: "#8B5CF6" },
+    ];
+
     breakdown.forEach((b) => {
       const method = (b.paymentMethod || "online").toLowerCase();
-      if (result[method] !== undefined) {
-        result[method] = b._sum.totalAmount || 0;
+      const item = result.find(i => i.name.toLowerCase() === method);
+      if (item) {
+        item.value = b._sum.totalAmount || 0;
       }
     });
 

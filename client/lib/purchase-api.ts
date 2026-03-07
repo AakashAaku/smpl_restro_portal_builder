@@ -24,6 +24,14 @@ export const recordPurchase = async (purchase: Partial<Purchase>): Promise<Purch
     return api.post("/purchases", purchase);
 };
 
+export const updatePurchase = async (id: string, purchase: Partial<Purchase>): Promise<Purchase> => {
+    return api.put(`/purchases/${id}`, purchase);
+};
+
+export const deletePurchase = async (id: string): Promise<{ message: string }> => {
+    return api.delete(`/purchases/${id}`);
+};
+
 export const getPurchasesByIngredient = async (ingredientId: number): Promise<Purchase[]> => {
     return api.get(`/purchases/ingredient/${ingredientId}`);
 };
