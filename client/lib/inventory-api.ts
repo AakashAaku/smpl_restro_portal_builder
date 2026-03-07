@@ -12,6 +12,35 @@ export interface Ingredient {
     lastRestocked?: string;
 }
 
+export interface Customer {
+    id: string; // Match schema cuid
+    name: string;
+    phone: string;
+    email?: string;
+    address?: string;
+    loyaltyPoints: number;
+    totalOrders?: number;
+    totalSpent: number;
+    loyaltyTier: "Bronze" | "Silver" | "Gold" | "Platinum";
+    status: "active" | "inactive" | "vip";
+}
+
+export const getCustomers = async (): Promise<Customer[]> => {
+    return api.get("/customers");
+};
+
+export const createCustomer = async (customer: Partial<Customer>): Promise<Customer> => {
+    return api.post("/customers", customer);
+};
+
+export const updateCustomer = async (id: string, customer: Partial<Customer>): Promise<Customer> => {
+    return api.put(`/customers/${id}`, customer);
+};
+
+export const getCustomerStats = async () => {
+    return api.get("/customers/stats");
+};
+
 export interface Supplier {
     id: number;
     name: string;
@@ -53,6 +82,14 @@ export const getSuppliers = async (): Promise<Supplier[]> => {
 
 export const createSupplier = async (supplier: Omit<Supplier, "id">): Promise<Supplier> => {
     return api.post("/inventory/suppliers", supplier);
+};
+
+export const updateSupplier = async (id: number, supplier: Partial<Supplier>): Promise<Supplier> => {
+    return api.put(`/inventory/suppliers/${id}`, supplier);
+};
+
+export const deleteSupplier = async (id: number): Promise<void> => {
+    return api.delete(`/inventory/suppliers/${id}`);
 };
 
 export const recordStockMovement = async (movement: Omit<StockMovement, "id" | "timestamp">): Promise<StockMovement> => {

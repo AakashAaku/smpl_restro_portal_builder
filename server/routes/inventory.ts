@@ -134,6 +134,34 @@ export const createSupplier: RequestHandler = async (req, res) => {
   }
 };
 
+export const updateSupplier: RequestHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, contact, email, address } = req.body;
+
+    const updated = await prisma.supplier.update({
+      where: { id: parseInt(id) },
+      data: { name, contact, email, address },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update supplier" });
+  }
+};
+
+export const deleteSupplier: RequestHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.supplier.delete({
+      where: { id: parseInt(id) },
+    });
+    res.json({ message: "Supplier deleted" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete supplier" });
+  }
+};
+
 export const recordStockMovement: RequestHandler = async (req, res) => {
   try {
     const { ingredientId, type, quantity, reason } = req.body;

@@ -85,12 +85,12 @@ async function main() {
         },
     });
 
-    const chicken = await prisma.ingredient.upsert({
+    const mushroom = await prisma.ingredient.upsert({
         where: { id: 2 },
-        update: { name: 'Chicken Breast' },
+        update: { name: 'Mushroom' },
         create: {
             id: 2,
-            name: 'Chicken Breast',
+            name: 'Mushroom',
             unit: 'kg',
             currentStock: 15,
             minStock: 5,
@@ -103,17 +103,17 @@ async function main() {
     // 4. Menu Items
     await prisma.menuItem.upsert({
         where: { id: 1 },
-        update: { name: 'Butter Chicken' },
+        update: { name: 'Dal Makhani' },
         create: {
             id: 1,
-            name: 'Butter Chicken',
+            name: 'Dal Makhani',
             category: 'Main Course',
             price: 450,
-            description: 'Classic creamy butter chicken',
+            description: 'Slow-cooked creamy black lentils - special signature',
             prepTime: 20,
             recipes: {
                 create: [
-                    { ingredientId: chicken.id, quantity: 0.25 },
+                    { ingredientId: 1, quantity: 0.1 }, // Paneer/Butter etc
                 ],
             },
         },

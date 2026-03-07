@@ -89,16 +89,9 @@ export const deleteMenuItem: RequestHandler = async (req, res) => {
     const { id } = req.params;
     const itemId = parseInt(id as string);
 
-    await prisma.$transaction(async (tx) => {
-      // Delete associated recipe records first
-      await tx.recipe.deleteMany({
-        where: { menuItemId: itemId },
-      });
-
-      // Delete the menu item
-      await tx.menuItem.delete({
-        where: { id: itemId },
-      });
+    // Prisma handles Cascades for Recipe, OrderItem, and ProductionRecord as defined in schema.prisma
+    await prisma.menuItem.delete({
+      where: { id: itemId },
     });
 
     res.json({ message: "Menu item deleted successfully" });

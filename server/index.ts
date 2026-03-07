@@ -32,6 +32,8 @@ import {
   getLowStockIngredients,
   getSuppliers,
   createSupplier,
+  updateSupplier,
+  deleteSupplier,
   recordStockMovement,
   getInventoryValue,
   getStockMovements,
@@ -151,6 +153,8 @@ export function createServer() {
   app.post("/api/inventory/stock-movement", authenticateJWT, recordStockMovement);
   app.get("/api/inventory/suppliers", authenticateJWT, getSuppliers);
   app.post("/api/inventory/suppliers", authenticateJWT, createSupplier);
+  app.put("/api/inventory/suppliers/:id", authenticateJWT, updateSupplier);
+  app.delete("/api/inventory/suppliers/:id", authenticateJWT, deleteSupplier);
   app.get("/api/inventory/stock-movements", authenticateJWT, getStockMovements);
 
   // Customer Management Routes
