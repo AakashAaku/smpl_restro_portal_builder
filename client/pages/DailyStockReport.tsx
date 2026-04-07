@@ -10,6 +10,9 @@ import {
   type Ingredient,
 } from "@/lib/inventory-api";
 import {
+  getPurchases,
+} from "@/lib/purchase-api";
+import {
   getProductionRecords,
 } from "@/lib/finished-goods-api";
 import {
@@ -33,7 +36,8 @@ import {
   Sparkles,
   ChevronRight,
   ClipboardCheck,
-  CalendarDays
+  CalendarDays,
+  History as HistoryIcon
 } from "lucide-react";
 
 export default function DailyStockReport() {
@@ -53,7 +57,12 @@ export default function DailyStockReport() {
     queryFn: getProductionRecords,
   });
 
-  const isLoading = loadingIngs || loadingRecords;
+  const { data: purchases = [], isLoading: loadingPurchases } = useQuery({
+    queryKey: ["purchases"],
+    queryFn: getPurchases,
+  });
+
+  const isLoading = loadingIngs || loadingRecords || loadingPurchases;
 
   const lowStockItems = ingredients.filter(i => i.currentStock <= (i.minStock || 0));
   const totalValue = ingredients.reduce((sum, i) => sum + (i.currentStock * (i.unitPrice || 0)), 0);
@@ -61,6 +70,21 @@ export default function DailyStockReport() {
   const dailyConsumption = productionRecords.filter(r =>
     new Date(r.dateProduced).toISOString().split("T")[0] === selectedDate
   );
+
+  const dailyPurchases = purchases.filter(p =>
+    new Date(p.purchaseDate).toISOString().split("T")[0] === selectedDate
+  );
+
+  const dailyInflowItems = dailyPurchases.flatMap(p => 
+    (p.items || []).map((item: any) => ({
+      ...item,
+      supplier: p.supplier,
+      requisitionNo: p.requisitionNo,
+      purchaseId: p.id
+    }))
+  );
+
+  const totalInflowValue = dailyPurchases.reduce((sum, p) => sum + (p.totalCost || 0), 0);
 
   if (isLoading) {
     return (
@@ -248,9 +272,10 @@ export default function DailyStockReport() {
 
       {/* Tabs */}
       <Tabs defaultValue="summary" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="summary">Stock Summary</TabsTrigger>
           <TabsTrigger value="charts">Charts</TabsTrigger>
+          <TabsTrigger value="inflow">Stock Inflow</TabsTrigger>
           <TabsTrigger value="consumption">Consumption</TabsTrigger>
         </TabsList>
 
@@ -338,7 +363,69 @@ export default function DailyStockReport() {
           </Card>
         </TabsContent>
 
-        {/* Consumption Tab */}
+        {/* Stock Inflow Tab */}
+        <TabsContent value="inflow" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Inventory Restock Inflow - {new Date(selectedDate).toLocaleDateString()}</CardTitle>
+              <div className="bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-2">
+                <TrendingUp className="h-3 w-3 text-emerald-600" />
+                <span className="text-[10px] font-black text-emerald-700 uppercase">Total Inflow: Rs.{totalInflowValue.toLocaleString()}</span>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {dailyPurchases.length === 0 ? (
+                <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                  <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <HistoryIcon className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <p className="text-muted-foreground font-medium">No stock inflows recorded for this date</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-muted-foreground uppercase text-[10px] font-black tracking-widest">
+                        <th className="text-left py-4 px-4">Material</th>
+                        <th className="text-left py-4 px-4">Supplier</th>
+                        <th className="text-right py-4 px-4">Quantity</th>
+                        <th className="text-right py-4 px-4">Unit Price</th>
+                        <th className="text-right py-4 px-4">Total Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dailyInflowItems.map((item, idx) => (
+                        <tr key={`${item.purchaseId}-${idx}`} className="border-b border-border/50 hover:bg-emerald-50/30 transition-colors group">
+                          <td className="py-4 px-4 font-bold text-emerald-950">
+                            <div className="flex flex-col">
+                              <span>{item.ingredientName}</span>
+                              {item.requisitionNo && (
+                                <span className="text-[8px] text-blue-500 font-black tracking-widest uppercase">Ref: {item.requisitionNo}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 font-medium text-slate-600 italic">{item.supplier}</td>
+                          <td className="text-right py-4 px-4">
+                             <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-black text-[10px]">+{item.quantity} {item.unit}</span>
+                          </td>
+                          <td className="text-right py-4 px-4 text-slate-500 font-medium">Rs.{(item.unitPrice || 0).toFixed(2)}</td>
+                          <td className="text-right py-4 px-4 font-bold text-emerald-700">Rs.{(item.totalCost || 0).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="mt-6 p-4 bg-emerald-900 rounded-xl text-white flex justify-between items-center shadow-xl shadow-emerald-900/20">
+                    <div className="flex items-center gap-3">
+                        <Package className="h-5 w-5 text-emerald-400" />
+                        <span className="text-xs font-black uppercase tracking-widest text-emerald-200">Daily Procurement total</span>
+                    </div>
+                    <span className="text-xl font-black">Rs.{totalInflowValue.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
         <TabsContent value="consumption" className="space-y-4">
           <Card>
             <CardHeader>

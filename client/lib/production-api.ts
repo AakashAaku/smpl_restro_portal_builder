@@ -23,11 +23,11 @@ export const getPrepLists = async (date?: string): Promise<PrepList[]> => {
     return api.get(date ? `/production/prep-lists?date=${date}` : "/production/prep-lists");
 };
 
-export const createPrepList = async (prepList: Partial<PrepList>): Promise<PrepList> => {
+export const createPrepList = async (prepList: any): Promise<PrepList> => {
     return api.post("/production/prep-lists", prepList);
 };
 
-export const updatePrepItemStatus = async (prepListId: number, itemId: number, status: string): Promise<void> => {
+export const updatePrepItemStatus = async (prepListId: number, itemId: number, status: string): Promise<any> => {
     return api.patch(`/production/prep-lists/${prepListId}/items/${itemId}/status`, { status });
 };
 

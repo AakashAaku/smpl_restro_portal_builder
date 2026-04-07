@@ -14,7 +14,7 @@ export const getTables: RequestHandler = async (_req, res) => {
 
 export const getTableById: RequestHandler = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const table = await prisma.table.findUnique({
             where: { id: parseInt(id) },
         });
@@ -54,7 +54,7 @@ export const createTable: RequestHandler = async (req, res) => {
 
 export const updateTable: RequestHandler = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const { number, capacity, status, customerName, customerPhone, partySize, notes } = req.body;
 
         const data: any = {
@@ -89,7 +89,7 @@ export const updateTable: RequestHandler = async (req, res) => {
 
 export const deleteTable: RequestHandler = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         await prisma.table.delete({
             where: { id: parseInt(id) },
         });
@@ -101,7 +101,7 @@ export const deleteTable: RequestHandler = async (req, res) => {
 
 export const updateTableStatus: RequestHandler = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const { status } = req.body;
         const table = await prisma.table.update({
             where: { id: parseInt(id) },

@@ -62,16 +62,23 @@ export default function FinishedGoods() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [ingData, fgData, recordsData] = await Promise.all([
+      const [ingData, fgData, recordsData] = await Promise.allSettled([
         getIngredients(),
         getFinishedGoods(),
         getProductionRecords()
       ]);
-      setIngredients(ingData);
-      setFinishedGoods(fgData);
-      setProductionRecords(recordsData);
+      
+      if (ingData.status === 'fulfilled') setIngredients(ingData.value);
+      else toast.error("Failed to load ingredients data");
+      
+      if (fgData.status === 'fulfilled') setFinishedGoods(fgData.value);
+      else toast.error("Failed to load finished goods catalog");
+      
+      if (recordsData.status === 'fulfilled') setProductionRecords(recordsData.value);
+      else toast.error("Failed to load production batch history");
+
     } catch (error) {
-      toast.error("Failed to load production data");
+      toast.error("An unexpected error occurred while loading data");
     } finally {
       setIsLoading(false);
     }
@@ -84,12 +91,32 @@ export default function FinishedGoods() {
     }
 
     const ingredient = ingredients.find((i) => i.id.toString() === selectedIngredientForRecipe);
-    if (!ingredient) return;
+    if (!ingredient) {
+      toast.error("Selected ingredient not found");
+      return;
+    }
+
+    const qty = parseFloat(recipeIngredientQty);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error("Please enter a valid quantity");
+      return;
+    }
+
+    // Validation: check if quantity is higher than stock (as requested by user)
+    if (qty > ingredient.currentStock) {
+      toast.warning(`Warning: Quantity (${qty}) is higher than current stock (${ingredient.currentStock})`);
+    }
+
+    // Check if ingredient already in recipe
+    if (recipe.some(r => r.ingredientId === ingredient.id)) {
+      toast.error("This ingredient is already added to the recipe");
+      return;
+    }
 
     const newItem: RecipeItem = {
       ingredientId: ingredient.id,
       ingredientName: ingredient.name,
-      quantityRequired: parseFloat(recipeIngredientQty),
+      quantityRequired: qty,
       unit: ingredient.unit,
     };
 
@@ -137,6 +164,19 @@ export default function FinishedGoods() {
     }
 
     const quantity = parseInt(productionQuantity);
+
+    const product = finishedGoods.find(p => p.id === selectedProductForProduction);
+    if (product) {
+      for (const item of product.recipe) {
+        const requiredQty = quantity * item.quantityRequired;
+        const ingredient = ingredients.find(i => i.id === item.ingredientId);
+        if (!ingredient || ingredient.currentStock < requiredQty) {
+          toast.error(`Insufficient stock for ${item.ingredientName}. Need ${requiredQty.toFixed(2)}, have ${ingredient?.currentStock?.toFixed(2) || 0}.`);
+          return;
+        }
+      }
+    }
+
     try {
       await produceFinishedGood(selectedProductForProduction, quantity);
       toast.success(`Successfully produced ${quantity} units`);
@@ -263,7 +303,7 @@ export default function FinishedGoods() {
                         <SelectContent>
                           {ingredients.map((ingredient) => (
                             <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
-                              {ingredient.name}
+                              {ingredient.name} (Stock: {ingredient.currentStock} {ingredient.unit})
                             </SelectItem>
                           ))}
                         </SelectContent>

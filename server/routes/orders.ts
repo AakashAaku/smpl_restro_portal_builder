@@ -4,7 +4,7 @@ import { OrderStatus } from "@prisma/client";
 
 export const getOrdersByCustomer: RequestHandler = async (req, res) => {
   try {
-    const { idOrPhone } = req.params;
+    const idOrPhone = req.params.idOrPhone as string;
     const orders = await prisma.order.findMany({
       where: {
         OR: [
@@ -26,18 +26,36 @@ export const getOrdersByCustomer: RequestHandler = async (req, res) => {
   }
 };
 
-export const getOrders: RequestHandler = async (_req, res) => {
+export const getOrders: RequestHandler = async (req, res) => {
   try {
-    const orders = await prisma.order.findMany({
-      include: {
-        orderItems: {
-          include: { menuItem: true },
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 25;
+    const skip = (page - 1) * limit;
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        skip,
+        take: limit,
+        include: {
+          orderItems: {
+            include: { menuItem: true },
+          },
+          customer: true,
         },
-        customer: true,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.order.count(),
+    ]);
+
+    res.json({
+      orders,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-      orderBy: { createdAt: "desc" },
     });
-    res.json(orders);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch orders" });
   }
@@ -45,7 +63,7 @@ export const getOrders: RequestHandler = async (_req, res) => {
 
 export const getOrderById: RequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
@@ -69,7 +87,18 @@ export const getOrderById: RequestHandler = async (req, res) => {
 
 export const createOrder: RequestHandler = async (req, res) => {
   try {
-    const { customerId, tableId, items, specialInstructions, customerName, customerPhone } = req.body;
+    const { 
+      customerId, 
+      tableId, 
+      items, 
+      specialInstructions, 
+      customerName, 
+      customerPhone,
+      orderType,
+      source,
+      paymentMethod,
+      paymentStatus
+    } = req.body;
 
     // Validation
     if (!items || items.length === 0) {
@@ -114,6 +143,10 @@ export const createOrder: RequestHandler = async (req, res) => {
           tableId: tableId ? parseInt(tableId) : undefined,
           totalAmount: total,
           status: OrderStatus.PENDING,
+          orderType: orderType || "DINING",
+          source: source || "ADMIN",
+          paymentMethod: paymentMethod || "CASH",
+          paymentStatus: paymentStatus || "PENDING",
           orderItems: {
             create: items.map((item: any) => ({
               menuItemId: item.menuItemId,
@@ -146,7 +179,7 @@ export const createOrder: RequestHandler = async (req, res) => {
 
 export const updateOrderStatus: RequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { status } = req.body;
 
     const updatedOrder = await prisma.order.update({
@@ -155,6 +188,16 @@ export const updateOrderStatus: RequestHandler = async (req, res) => {
     });
 
     res.json(updatedOrder);
+
+    // Accounting Hook: If order is completed/served, record sale
+    if (status.toUpperCase() === "COMPLETED" || status.toUpperCase() === "SERVED") {
+      try {
+        const { recordOrderSale } = await import("../lib/accounting-service");
+        await recordOrderSale(id);
+      } catch (error) {
+        console.error(`Failed to record accounting entry for order ${id}:`, error);
+      }
+    }
 
     // If order is now PREPARING, deduct stock
     if (status.toUpperCase() === "PREPARING") {
@@ -175,7 +218,7 @@ export const updateOrderStatus: RequestHandler = async (req, res) => {
 
 export const cancelOrder: RequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const cancelledOrder = await prisma.order.update({
       where: { id },

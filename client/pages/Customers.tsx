@@ -26,6 +26,7 @@ import {
   getCustomerStats
 } from "@/lib/customer-api";
 import { toast } from "sonner";
+import { AdminHeader } from "@/components/layout/AdminHeader";
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -85,140 +86,120 @@ export default function Customers() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-primary/10 p-1.5 rounded-lg">
-              <Leaf className="h-4 w-4 text-primary" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
-              VenzoSmart • CRM & Loyalty
-            </span>
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
-            Customer <span className="text-primary italic">Relations</span>
-          </h1>
-          <p className="text-muted-foreground mt-1 font-medium italic">
-            "Cultivating a Community of Healthy Living"
-          </p>
-        </div>
-        <Dialog open={isAddingCustomer} onOpenChange={setIsAddingCustomer}>
-          <DialogTrigger asChild>
-            <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
-              <Plus className="h-5 w-5" />
-              REGISTER NEW PATRON
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Customer</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddCustomer} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="cust-name">Customer Name</Label>
-                <Input
-                  id="cust-name"
-                  required
-                  value={customerForm.name}
-                  onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cust-phone">Phone Number</Label>
-                <Input
-                  id="cust-phone"
-                  required
-                  value={customerForm.phone}
-                  onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cust-email">Email (Optional)</Label>
-                <Input
-                  id="cust-email"
-                  value={customerForm.email}
-                  onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cust-address">Address (Optional)</Label>
-                <Input
-                  id="cust-address"
-                  value={customerForm.address}
-                  onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })}
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="submit">Add Customer</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+    <div className="space-y-6">
+      <AdminHeader 
+        title="Customer CRM" 
+        subtitle="Manage customer relationships and loyalty programs"
+        actions={
+          <Dialog open={isAddingCustomer} onOpenChange={setIsAddingCustomer}>
+            <DialogTrigger asChild>
+              <Button className="font-bold gap-2">
+                <Plus className="h-4 w-4" />
+                REGISTER NEW PATRON
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Customer</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddCustomer} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Customer Name</Label>
+                  <Input
+                    required
+                    value={customerForm.name}
+                    onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Phone Number</Label>
+                    <Input
+                      required
+                      value={customerForm.phone}
+                      onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email (Optional)</Label>
+                    <Input
+                      type="email"
+                      value={customerForm.email}
+                      onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Address (Optional)</Label>
+                  <Input
+                    value={customerForm.address}
+                    onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })}
+                  />
+                </div>
+                <Button type="submit" className="w-full">Register Customer</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Patron Base</p>
-                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{customers.length}</p>
-                <p className="text-[10px] text-emerald-600 font-bold mt-2">Registered diners</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Total Patrons</p>
+                <p className="text-2xl font-bold">{customers.length}</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
-                <Users className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Users className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Elite Circle</p>
-                <p className="text-3xl font-black tracking-tight text-amber-600">{stats?.vipCount || 0}</p>
-                <p className="text-[10px] text-amber-600 font-bold mt-2">VIP status members</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">VIP Members</p>
+                <p className="text-2xl font-bold text-amber-600">{stats?.vipCount || 0}</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
-                <Crown className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Crown className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Lifetime Value</p>
-                <p className="text-3xl font-black tracking-tight text-emerald-700">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Total Revenue</p>
+                <p className="text-2xl font-bold text-emerald-700">
                   Rs.{stats?.totalRevenue?.toLocaleString() || "0"}
                 </p>
-                <p className="text-[10px] text-emerald-600 font-bold mt-2">Aggregate revenue</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
-                <TrendingUp className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Engagement</p>
-                <p className="text-3xl font-black tracking-tight text-purple-600">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Loyalty Points</p>
+                <p className="text-2xl font-bold text-purple-600">
                   {stats?.totalLoyaltyPoints?.toLocaleString() || "0"}
                 </p>
-                <p className="text-[10px] text-purple-600 font-bold mt-2">Active loyalty points</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm">
-                <Star className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                <Star className="h-5 w-5" />
               </div>
             </div>
           </CardContent>

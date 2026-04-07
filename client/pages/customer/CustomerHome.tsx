@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,18 +19,13 @@ import {
   MapPin,
   Clock,
   Star,
-  Sparkles,
   UtensilsCrossed,
-  Heart,
-  ChevronRight,
-  User,
-  PartyPopper,
-  History
+  History,
+  Calendar
 } from "lucide-react";
 import { logout } from "@/lib/auth";
-import { getMenuItems, MenuItem as ApiMenuItem } from "@/lib/menu";
+import { getMenuItems } from "@/lib/menu";
 import { toast } from "sonner";
-import { useEffect } from "react";
 
 interface MenuItem {
   id: number;
@@ -47,8 +42,6 @@ interface MenuItem {
 interface CartItem extends MenuItem {
   quantity: number;
 }
-
-const mockMenuItems: MenuItem[] = []; // Will be replaced by API data
 
 export default function CustomerHome() {
   const navigate = useNavigate();
@@ -68,11 +61,10 @@ export default function CustomerHome() {
     setIsLoading(true);
     try {
       const data = await getMenuItems();
-      // Map API MenuItem to Customer MenuItem format
       const mappedData: MenuItem[] = data.map(item => ({
         ...item,
-        rating: 4.8 + Math.random() * 0.2, // Premium ratings
-        veg: true // 110% Pure Veg & Eggless
+        rating: 4.8 + Math.random() * 0.2,
+        veg: true
       }));
       setMenuItems(mappedData);
     } catch (error) {
@@ -140,22 +132,20 @@ export default function CustomerHome() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-muted/30 pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-card border-b border-border shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          {/* Top Row */}
-          <div className="flex items-center justify-between mb-3">
+      <div className="sticky top-0 z-50 bg-background border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-emerald-600 to-green-500 text-white p-2.5 rounded-xl shadow-lg organic-glow scale-110">
-                <Leaf className="h-6 w-6" />
+              <div className="bg-primary/10 text-primary p-2 rounded-lg">
+                <Leaf className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter text-emerald-950 flex items-center gap-1">
-                  VENZO<span className="text-primary italic">SMART</span>
-                  <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" />
+                <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                  VenzoSmart
                 </h1>
-                <p className="text-[9px] text-primary font-black uppercase tracking-[0.3em] -mt-1 bg-primary/5 px-2 py-0.5 rounded-full inline-block">
+                <p className="text-xs text-muted-foreground font-medium">
                   110% Pure Veg & Eggless
                 </p>
               </div>
@@ -171,7 +161,7 @@ export default function CustomerHome() {
                 <ShoppingCart className="h-4 w-4" />
                 Cart
                 {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                  <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
                     {cartCount}
                   </span>
                 )}
@@ -180,7 +170,7 @@ export default function CustomerHome() {
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="gap-2"
+                className="gap-2 hidden sm:flex"
               >
                 <LogOut className="h-4 w-4" />
                 Logout
@@ -189,106 +179,83 @@ export default function CustomerHome() {
           </div>
 
           {/* Navigation */}
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             <Button
               variant="default"
               size="sm"
               onClick={() => navigate("/customer/home")}
-              className="gap-2 rounded-full px-6 h-10 font-black shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all hover:scale-105 whitespace-nowrap"
+              className="gap-2 rounded-md font-medium"
             >
               <UtensilsCrossed className="h-4 w-4" />
-              CURATED MENU
+              Menu
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate("/customer/orders")}
-              className="gap-2 rounded-full px-6 h-10 font-bold border-emerald-100 bg-white hover:bg-emerald-50 whitespace-nowrap"
+              className="gap-2 rounded-md font-medium"
             >
-              <History className="h-4 w-4 text-primary" />
-              PREVIOUS ORDERS
+              <History className="h-4 w-4 text-muted-foreground" />
+              Orders
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate("/customer/events")}
-              className="gap-2 rounded-full px-6 h-10 font-bold border-emerald-100 bg-white hover:bg-emerald-50 whitespace-nowrap"
+              className="gap-2 rounded-md font-medium"
             >
-              <PartyPopper className="h-4 w-4 text-primary" />
-              GALA BOOKING
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              Book Event
             </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <div className="relative mb-12 rounded-[2.5rem] overflow-hidden shadow-2xl organic-glow group h-[400px]">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/80 via-emerald-900/40 to-transparent z-10" />
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1543353071-10c8ba85a904?auto=format&fit=crop&q=80')] bg-cover bg-center group-hover:scale-110 transition-transform duration-[10s]" />
-          <div className="absolute inset-0 z-20 flex flex-col justify-center px-10 sm:px-20">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 backdrop-blur-xl border border-emerald-400/30 text-emerald-400 text-[10px] font-black uppercase tracking-[0.3em] mb-6 shadow-2xl">
-                <Sparkles className="h-3 w-3" />
-                Verified Pure Veg & Eggless
-              </div>
-              <h2 className="text-5xl sm:text-7xl font-black text-white tracking-tighter mb-6 leading-[0.9]">
-                Divine <span className="text-primary italic">Purity</span><br />
-                Organic Bliss.
-              </h2>
-              <p className="text-xl text-emerald-50/70 font-medium mb-10 max-w-lg leading-relaxed">
-                Elevating the vegetarian craft in Bhaktapur. 110% committed to ethical, organic, and eggless gastronomy.
-              </p>
-              <div className="flex flex-wrap gap-5">
-                <div className="flex items-center gap-3 bg-white/10 backdrop-blur-xl px-6 py-3 rounded-2xl border border-white/20 shadow-xl transition-all hover:bg-white/20">
-                  <div className="bg-emerald-500/30 p-2 rounded-lg">
-                    <MapPin className="h-4 w-4 text-emerald-300" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Sanctuary</p>
-                    <p className="text-sm font-bold text-white tracking-tight">Radhe Radhe, Bhaktapur</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 bg-white/10 backdrop-blur-xl px-6 py-3 rounded-2xl border border-white/20 shadow-xl transition-all hover:bg-white/20">
-                  <div className="bg-emerald-500/30 p-2 rounded-lg">
-                    <Clock className="h-4 w-4 text-emerald-300" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Status</p>
-                    <p className="text-sm font-bold text-white tracking-tight">Accepting Orders</p>
-                  </div>
-                </div>
-              </div>
+        {/* Banner */}
+        <div className="mb-8 rounded-lg overflow-hidden border bg-card relative min-h-[200px] flex items-center">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-900 to-emerald-800" />
+          <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1543353071-10c8ba85a904?auto=format&fit=crop&q=80')] bg-cover bg-center" />
+          <div className="relative z-10 p-8 sm:p-12 text-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/20 backdrop-blur-sm border border-white/20 text-xs font-semibold mb-4">
+               <Leaf className="h-3 w-3" />
+               Pure Veg Certified
             </div>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-2">
+              Fresh Organic Dining
+            </h2>
+            <p className="text-emerald-50 max-w-md">
+              Order your favorite vegetarian crafted meals directly to your table or for takeaway.
+            </p>
           </div>
-          {/* Circular Accent */}
-          <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-primary/20 rounded-full blur-[100px] z-10" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar - Search & Categories */}
           <div className="lg:col-span-1 space-y-4">
-            <div className="space-y-2 sticky top-24">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search items..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+            <div className="space-y-4 sticky top-28">
+              <div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search menu..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-semibold">Categories</p>
+              <div>
+                <p className="text-sm font-semibold mb-2">Categories</p>
                 <div className="space-y-1">
                   {categories.map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${selectedCategory === cat
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-secondary"
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${selectedCategory === cat
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "hover:bg-muted text-muted-foreground"
                         }`}
                     >
                       {cat}
@@ -300,16 +267,19 @@ export default function CustomerHome() {
           </div>
 
           {/* Main Content - Menu Items */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Menu</h2>
+          <div className="lg:col-span-2 relative">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Menu Items</h2>
               <span className="text-sm text-muted-foreground">
-                {filteredItems.length} items available
+                {isLoading ? "Loading..." : `${filteredItems.length} items`}
               </span>
             </div>
-            {filteredItems.length === 0 ? (
+            
+            {isLoading ? (
+               <div className="text-center py-12 text-muted-foreground border rounded-lg bg-card">Loading menu...</div>
+            ) : filteredItems.length === 0 ? (
               <Card>
-                <CardContent className="pt-12 text-center">
+                <CardContent className="pt-12 pb-12 text-center border-none">
                   <p className="text-muted-foreground">No items found</p>
                 </CardContent>
               </Card>
@@ -318,58 +288,49 @@ export default function CustomerHome() {
                 {filteredItems.map((item) => (
                   <Card
                     key={item.id}
-                    className="premium-card group cursor-pointer overflow-hidden border-none"
+                    className="group cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => setSelectedItem(item)}
                   >
-                    <CardContent className="p-4">
-                      {/* Item Header with Badges */}
-                      <div className="flex justify-between items-start gap-2 mb-3">
+                    <CardContent className="p-4 flex flex-col h-full">
+                      <div className="flex justify-between items-start gap-2 mb-2">
                         <div className="flex-1">
-                          <h3 className="font-black text-xl tracking-tighter text-emerald-950 line-clamp-1 italic">
+                          <h3 className="font-semibold text-lg line-clamp-1">
                             {item.name}
                           </h3>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-emerald-100/50 px-2 py-1 rounded-full border border-emerald-200 shadow-sm">
-                          <Leaf className="h-3 w-3 text-emerald-600" />
-                          <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Pure Veg</span>
+                        <div className="bg-primary/10 px-2 py-0.5 rounded text-[10px] font-semibold text-primary shrink-0">
+                          Veg
                         </div>
                       </div>
 
-                      {/* Description */}
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2 h-9">
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-[40px]">
                         {item.description}
                       </p>
 
-                      {/* Rating and Time */}
-                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950 px-2 py-1 rounded">
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            <span className="font-medium">{item.rating}</span>
+                      <div className="mt-auto pt-4 border-t flex flex-col gap-4">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1 bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded font-medium">
+                            <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                            {(item.rating || 4.5).toFixed(1)}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">
-                              {item.prepTime} min
-                            </span>
+                            <Clock className="h-3 w-3" />
+                            {item.prepTime}m
                           </span>
                         </div>
-                      </div>
-
-                      {/* Price and Action */}
-                      <div className="flex items-center justify-between">
-                        <p className="font-black text-2xl text-primary tracking-tighter italic">Rs.{item.price}</p>
-                        <Button
-                          size="sm"
-                          className="h-10 px-6 rounded-xl font-black border-none shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all hover:scale-105"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(item);
-                          }}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          ACQUIRE
-                        </Button>
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-lg">Rs.{item.price}</p>
+                          <Button
+                            size="sm"
+                            className="h-8 px-4"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(item);
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -379,47 +340,53 @@ export default function CustomerHome() {
           </div>
 
           {/* Right Sidebar - Cart Summary */}
-          {showCart && (
+          {(showCart || cart.length > 0) && (
             <div className="lg:col-span-1">
-              <Card className="sticky top-24">
-                <CardHeader>
-                  <CardTitle>Your Cart</CardTitle>
+               {/* Cart displayed permanently on large screens if items exist, or toggled on mobile */}
+              <Card className={`sticky top-28 shadow-sm ${!showCart && 'hidden lg:block'}`}>
+                <CardHeader className="pb-3 border-b">
+                  <CardTitle className="text-base flex justify-between items-center">
+                    Your Cart
+                    <span className="text-sm font-normal text-muted-foreground">{cartCount} items</span>
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="pt-4 space-y-4">
                   {cart.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">
+                    <p className="text-muted-foreground text-sm text-center py-4">
                       Your cart is empty
                     </p>
                   ) : (
                     <>
-                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                      <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
                         {cart.map((item) => (
                           <div
                             key={item.id}
-                            className="flex items-start gap-3 pb-3 border-b border-border last:border-b-0"
+                            className="flex items-start justify-between pb-3 border-b last:border-b-0"
                           >
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{item.name}</p>
+                            <div className="flex-1 pr-2">
+                              <p className="font-medium text-sm leading-tight mb-1">{item.name}</p>
                               <p className="text-xs text-muted-foreground">
                                 Rs.{item.price} each
                               </p>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 bg-muted rounded-md shrink-0">
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                className="h-7 w-7 p-0"
                                 onClick={() =>
                                   updateQuantity(item.id, item.quantity - 1)
                                 }
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
-                              <span className="w-6 text-center text-sm">
+                              <span className="w-5 text-center text-xs font-medium">
                                 {item.quantity}
                               </span>
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                className="h-7 w-7 p-0"
                                 onClick={() =>
                                   updateQuantity(item.id, item.quantity + 1)
                                 }
@@ -431,22 +398,22 @@ export default function CustomerHome() {
                         ))}
                       </div>
 
-                      <div className="space-y-2 pt-4 border-t border-border">
+                      <div className="space-y-2 pt-2 border-t">
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Subtotal</span>
                           <span className="font-medium">Rs.{cartTotal.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Delivery Fee</span>
+                          <span className="text-muted-foreground">Service Fee</span>
                           <span className="font-medium">Rs.40</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">VAT (13%)</span>
-                          <span className="font-medium text-green-600">
+                          <span className="font-medium">
                             Rs.{Math.round(cartTotal * 0.13).toFixed(2)}
                           </span>
                         </div>
-                        <div className="flex justify-between font-bold pt-3 border-t border-border text-lg">
+                        <div className="flex justify-between font-bold pt-3 border-t text-base">
                           <span>Total</span>
                           <span className="text-primary">
                             Rs.{(cartTotal + 40 + Math.round(cartTotal * 0.13)).toFixed(2)}
@@ -455,8 +422,7 @@ export default function CustomerHome() {
                       </div>
 
                       <Button
-                        className="w-full mt-4"
-                        size="lg"
+                        className="w-full mt-2"
                         onClick={handleCheckout}
                       >
                         Proceed to Checkout
@@ -472,42 +438,42 @@ export default function CustomerHome() {
 
       {/* Item Detail Dialog */}
       <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{selectedItem?.name}</DialogTitle>
+            <DialogTitle className="text-xl flex justify-between pr-6">
+              {selectedItem?.name}
+              <span className="text-primary">Rs.{selectedItem?.price}</span>
+            </DialogTitle>
           </DialogHeader>
           {selectedItem && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
+            <div className="space-y-6 pt-4">
+              <div className="space-y-3">
+                <p className="text-sm text-foreground">
                   {selectedItem.description}
                 </p>
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    {selectedItem.rating}
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-1 rounded-md font-medium">
+                    <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                    {(selectedItem.rating || 4.5).toFixed(1)}
                   </span>
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1 border border-border px-2 py-1 rounded-md">
                     <Clock className="h-4 w-4" />
-                    {selectedItem.prepTime} min
+                    {selectedItem.prepTime} min prep
                   </span>
                 </div>
               </div>
 
-              <div className="p-4 bg-secondary rounded-lg">
-                <p className="text-2xl font-bold">Rs.{selectedItem.price}</p>
+              <div className="border-t pt-4">
+                <Button
+                  className="w-full h-11"
+                  onClick={() => {
+                    addToCart(selectedItem);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add to Cart
+                </Button>
               </div>
-
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={() => {
-                  addToCart(selectedItem);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add to Cart
-              </Button>
             </div>
           )}
         </DialogContent>

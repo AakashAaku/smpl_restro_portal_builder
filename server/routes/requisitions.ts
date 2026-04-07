@@ -5,6 +5,9 @@ export const getRequisitions: RequestHandler = async (_req, res) => {
     try {
         const requisitions = await prisma.requisition.findMany({
             include: {
+                author: {
+                    select: { name: true }
+                },
                 items: {
                     include: { ingredient: true },
                 },
@@ -31,7 +34,7 @@ export const createRequisition: RequestHandler = async (req, res) => {
         const requisition = await prisma.requisition.create({
             data: {
                 requisitionNo,
-                staffId: parseInt(staffId),
+                staffId,
                 notes,
                 items: {
                     create: items.map((item: any) => ({
@@ -58,7 +61,7 @@ export const updateRequisitionStatus: RequestHandler = async (req, res) => {
         const { status } = req.body;
 
         const updated = await prisma.requisition.update({
-            where: { id: parseInt(id) },
+            where: { id: parseInt(id as string) },
             data: { status },
         });
 

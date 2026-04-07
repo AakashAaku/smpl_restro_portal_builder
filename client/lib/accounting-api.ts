@@ -62,3 +62,11 @@ export interface ProfitabilityItem {
 export const getProfitabilityReport = async (): Promise<ProfitabilityItem[]> => {
     return api.get("/accounting/profitability");
 };
+
+export const getAccounts = async (): Promise<any[]> => {
+    return api.get("/accounting/accounts");
+};
+
+export const getJournalEntries = async (): Promise<any[]> => {
+    return api.get("/accounting/journal");
+};

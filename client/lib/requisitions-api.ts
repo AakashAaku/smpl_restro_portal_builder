@@ -12,7 +12,8 @@ export interface RequisitionItem {
 export interface Requisition {
     id: number;
     requisitionNo: string;
-    staffId: number;
+    staffId: string;
+    author?: { name: string };
     status: 'pending' | 'approved' | 'rejected' | 'ordered';
     items: RequisitionItem[];
     notes?: string;
@@ -24,7 +25,7 @@ export const getRequisitions = async (): Promise<Requisition[]> => {
     return api.get("/requisitions");
 };
 
-export const createRequisition = async (data: { staffId: number; items: { ingredientId: number; quantity: number }[]; notes?: string }): Promise<Requisition> => {
+export const createRequisition = async (data: { staffId: string; items: { ingredientId: number; quantity: number }[]; notes?: string }): Promise<Requisition> => {
     return api.post("/requisitions", data);
 };
 

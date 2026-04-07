@@ -8,7 +8,8 @@ import { getTables } from "@/lib/tables-api";
 function generateQRCodeDataURL(tableNumber: string): string {
   // Generate a simple QR code URL using QR server API
   // Using window.location.origin supports local network address (e.g., http://192.168.x.x:3000)
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+  // Using window.location.origin supports local network address (e.g., http://192.168.x.x:3000)
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(
     `${window.location.origin}/table-order?table=${tableNumber}`
   )}`;
   return qrUrl;
@@ -109,8 +110,8 @@ export default function TableQRCodes() {
             .page {
               page-break-after: always;
               display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 40px;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 20px;
               padding: 20px;
               height: 100vh;
             }
@@ -124,8 +125,8 @@ export default function TableQRCodes() {
               font-size: 24px;
             }
             img {
-              width: 250px;
-              height: 250px;
+              width: 200px;
+              height: 200px;
               border: 1px solid #999;
               padding: 5px;
             }
@@ -150,7 +151,7 @@ export default function TableQRCodes() {
         </div>
       `;
 
-      if ((index + 1) % 4 === 0 && index + 1 < tables.length) {
+      if ((index + 1) % 6 === 0 && index + 1 < tables.length) {
         htmlContent += `
           </div>
           <div class="page">
@@ -225,7 +226,7 @@ export default function TableQRCodes() {
           <Button variant="outline" onClick={() => window.location.href = '/admin/tables'}>Configure Tables First</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
           {tables.map((table) => {
             const qrDataUrl = generateQRCodeDataURL(table.number);
             return (

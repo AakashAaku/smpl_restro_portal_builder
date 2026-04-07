@@ -1,3 +1,4 @@
+import { AdminHeader } from "@/components/layout/AdminHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -57,9 +58,10 @@ export default function OrderManagement() {
   const [manualOrderForm, setManualOrderForm] = useState({
     customerName: "Walk-in",
     customerPhone: "",
-    orderType: "TAKEAWAY" as "DELIVERY" | "TAKEAWAY",
-    paymentMethod: "cash",
+    orderType: "TAKEAWAY" as any,
+    paymentMethod: "CASH",
   });
+  const [page, setPage] = useState(1);
   const [manualOrderItems, setManualOrderItems] = useState<BillItem[]>([]);
   const [manualOrderStep, setManualOrderStep] = useState(1);
 
@@ -69,11 +71,14 @@ export default function OrderManagement() {
     queryFn: getMenuItems,
   });
 
-  const { data: orders = [], isLoading: ordersLoading } = useQuery({
-    queryKey: ["orders"],
-    queryFn: getOrders,
+  const { data: paginatedData, isLoading: ordersLoading } = useQuery({
+    queryKey: ["orders", page],
+    queryFn: () => getOrders(page, 25),
     refetchInterval: 5000,
   });
+
+  const orders = paginatedData?.orders || [];
+  const pagination = paginatedData?.pagination;
 
   const { data: stats } = useQuery({
     queryKey: ["order-stats"],
@@ -160,7 +165,9 @@ export default function OrderManagement() {
           quantity: item.quantity,
           price: item.unitPrice
         })),
-        paymentMethod: manualOrderForm.paymentMethod
+        paymentMethod: manualOrderForm.paymentMethod,
+        paymentStatus: "PAID",
+        source: "ADMIN"
       };
 
       await createOrder(orderData);
@@ -198,7 +205,7 @@ export default function OrderManagement() {
       vatPercent: 13,
       deliveryFee: 0,
       totalAmount: order.totalAmount,
-      paymentMethod: "CASH"
+      paymentMethod: order.paymentMethod || "CASH"
     };
 
     printBill(bill);
@@ -213,30 +220,17 @@ export default function OrderManagement() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-primary/10 p-1.5 rounded-lg">
-              <Leaf className="h-4 w-4 text-primary" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
-              VenzoSmart • Order Control Center
-            </span>
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
-            Active <span className="text-primary italic">Orders</span>
-          </h1>
-          <p className="text-muted-foreground mt-1 font-medium italic">
-            "Real-time fulfillment of Organic Excellence"
-          </p>
-        </div>
-        <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]" onClick={() => setIsManualOrderOpen(true)}>
-          <Plus className="h-5 w-5" />
-          CREATE MANUAL ORDER
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <AdminHeader 
+        title="Active Orders" 
+        subtitle="Monitor and manage real-time customer orders"
+        actions={
+          <Button className="font-bold gap-2" onClick={() => setIsManualOrderOpen(true)}>
+            <Plus className="h-4 w-4" />
+            CREATE MANUAL ORDER
+          </Button>
+        }
+      />
 
       {/* Filters */}
       <div className="flex gap-4 items-end flex-wrap">
@@ -246,7 +240,7 @@ export default function OrderManagement() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="search"
-              placeholder="Search..."
+              placeholder="Search by name or order number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -254,7 +248,7 @@ export default function OrderManagement() {
           </div>
         </div>
         <div className="w-48">
-          <Label htmlFor="status-filter">Status</Label>
+          <Label htmlFor="status-filter">Status Filter</Label>
           <Select value={selectedStatus} onValueChange={setSelectedStatus}>
             <SelectTrigger className="mt-2">
               <SelectValue />
@@ -270,51 +264,48 @@ export default function OrderManagement() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border shadow-sm overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Cycle Count</p>
-                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{stats?.totalOrders || 0}</p>
-                <p className="text-[10px] text-emerald-600 font-bold mt-2">Total orders processed</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Total Orders</p>
+                <p className="text-2xl font-bold">{stats?.totalOrders || 0}</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
-                <Receipt className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <Receipt className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden">
+        <Card className="border shadow-sm overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Gross Inflow</p>
-                <p className="text-3xl font-black tracking-tight text-emerald-700">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Total Revenue</p>
+                <p className="text-2xl font-bold text-emerald-600">
                   Rs.{Math.round(stats?.totalRevenue || 0).toLocaleString()}
                 </p>
-                <p className="text-[10px] text-emerald-600 font-bold mt-2">Daily aggregate revenue</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
-                <TrendingUp className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden">
+        <Card className="border shadow-sm overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Average Ticket</p>
-                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Avg. Order Value</p>
+                <p className="text-2xl font-bold">
                   Rs.{Math.round(stats?.averageOrderValue || 0).toLocaleString()}
                 </p>
-                <p className="text-[10px] text-primary font-bold mt-2">Per-customer yield</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
-                <Timer className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Timer className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
@@ -393,6 +384,31 @@ export default function OrderManagement() {
         )}
       </div>
 
+      {/* Pagination Controls */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-6">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setPage(prev => Math.max(1, prev - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm font-medium">
+            Page {page} of {pagination.totalPages}
+          </span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setPage(prev => Math.min(pagination.totalPages, prev + 1))}
+            disabled={page === pagination.totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       {/* Order Details Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">
@@ -461,8 +477,19 @@ export default function OrderManagement() {
                 <Select value={manualOrderForm.orderType} onValueChange={(v: any) => setManualOrderForm({ ...manualOrderForm, orderType: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="DINING">Dine-in</SelectItem>
                     <SelectItem value="TAKEAWAY">Takeaway</SelectItem>
-                    <SelectItem value="DELIVERY">Delivery</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="pt-2">
+                <Label>Payment Method</Label>
+                <Select value={manualOrderForm.paymentMethod} onValueChange={(v: any) => setManualOrderForm({ ...manualOrderForm, paymentMethod: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CASH">Cash</SelectItem>
+                    <SelectItem value="CARD">Card</SelectItem>
+                    <SelectItem value="ONLINE">Online/Fonepay</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -39,7 +39,7 @@ export const createAsset: RequestHandler = async (req, res) => {
 
 export const updateAsset: RequestHandler = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const data = req.body;
 
         const updated = await prisma.asset.update({
@@ -59,7 +59,7 @@ export const updateAsset: RequestHandler = async (req, res) => {
 
 export const deleteAsset: RequestHandler = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         await prisma.asset.delete({
             where: { id: parseInt(id) },
         });

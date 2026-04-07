@@ -3,7 +3,7 @@ import prisma from "../lib/prisma";
 
 export const getRecipesByMenuItem: RequestHandler = async (req, res) => {
     try {
-        const { menuItemId } = req.params;
+        const menuItemId = req.params.menuItemId as string;
         const recipes = await prisma.recipe.findMany({
             where: { menuItemId: parseInt(menuItemId) },
             include: { ingredient: true }
@@ -17,7 +17,7 @@ export const getRecipesByMenuItem: RequestHandler = async (req, res) => {
 
 export const updateMenuItemRecipe: RequestHandler = async (req, res) => {
     try {
-        const { menuItemId } = req.params;
+        const menuItemId = req.params.menuItemId as string;
         const { ingredients } = req.body; // Array of { ingredientId, quantity }
 
         if (!Array.isArray(ingredients)) {

@@ -16,21 +16,26 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Plus, ClipboardList, Clock, CheckCircle2, X, Leaf, Sparkles, Send } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Plus, ClipboardList, Clock, CheckCircle2, X, Leaf, Sparkles, Send, ChevronDown, ChevronUp } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getIngredients, type Ingredient } from "@/lib/inventory-api";
-import { getRequisitions, createRequisition, type Requisition } from "@/lib/requisitions-api";
+import { getRequisitions, createRequisition, updateRequisitionStatus, type Requisition } from "@/lib/requisitions-api";
 import { AuthUser } from "@/lib/auth";
 
 export default function Requisition() {
+    const navigate = useNavigate();
     const [user] = useState<AuthUser | null>(JSON.parse(localStorage.getItem("auth_user") || "null"));
     const [requisitions, setRequisitions] = useState<Requisition[]>([]);
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+    const [selectedRequisition, setSelectedRequisition] = useState<Requisition | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [items, setItems] = useState<{ ingredientId: string; quantity: string }[]>([]);
     const [notes, setNotes] = useState("");
+    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
     useEffect(() => {
         loadData();
@@ -77,7 +82,7 @@ export default function Requisition() {
 
         try {
             await createRequisition({
-                staffId: parseInt(user.id),
+                staffId: user.id,
                 notes,
                 items: items.map(i => ({
                     ingredientId: parseInt(i.ingredientId),
@@ -92,6 +97,16 @@ export default function Requisition() {
         } catch (error) {
             toast.error("Failed to submit requisition");
         }
+    };
+
+    const toggleRow = (id: number) => {
+        const newExpanded = new Set(expandedRows);
+        if (newExpanded.has(id)) {
+            newExpanded.delete(id);
+        } else {
+            newExpanded.add(id);
+        }
+        setExpandedRows(newExpanded);
     };
 
     return (
@@ -187,7 +202,7 @@ export default function Requisition() {
                                     onChange={(e) => setNotes(e.target.value)}
                                     className="w-full px-3 py-2 border border-input rounded-md text-sm min-h-[80px]"
                                     placeholder="Reason for request..."
-                                />
+                                ></textarea>
                             </div>
 
                             <div className="flex justify-end gap-3 pt-4 border-t">
@@ -215,63 +230,162 @@ export default function Requisition() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="space-y-4">
-                        {requisitions.map((req) => (
-                            <Card key={req.id} className="premium-card border-none shadow-lg hover:shadow-xl transition-all overflow-hidden relative group">
-                                <div className={`absolute top-0 left-0 w-1.5 h-full ${req.status === 'pending' ? 'bg-amber-400' : 'bg-emerald-500'}`} />
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 py-6">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <CardTitle className="text-xl font-black tracking-tight text-emerald-950 uppercase">{req.requisitionNo}</CardTitle>
-                                            <div className="bg-emerald-50/50 p-1 rounded">
-                                                <Sparkles className="h-3 w-3 text-emerald-500" />
-                                            </div>
-                                        </div>
-                                        <p className="text-[10px] font-bold text-muted-foreground/60 tracking-widest uppercase">
-                                            {new Date(req.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} • {new Date(req.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                                        </p>
-                                    </div>
-                                    <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] ${req.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                        req.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
-                                            'bg-slate-100 text-slate-700'
-                                        }`}>
-                                        {req.status === 'pending' && <Clock className="h-3 w-3" />}
-                                        {req.status === 'approved' && <CheckCircle2 className="h-3 w-3" />}
-                                        <span>{req.status}</span>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="pb-6">
-                                    <div className="space-y-4">
-                                        <div className="flex flex-wrap gap-2 pt-1">
-                                            {req.items.map((item, idx) => (
-                                                <div key={idx} className="bg-white border border-emerald-100 px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-2 group-hover:scale-105 transition-transform">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                                    <span className="text-sm font-bold text-emerald-950">{item.ingredient.name}</span>
-                                                    <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 rounded-full">{item.quantity} {item.ingredient.unit}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {req.notes && (
-                                            <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100 relative">
-                                                <div className="absolute -top-3 left-4 bg-white px-2 py-0.5 rounded border border-slate-100 text-[8px] font-black text-slate-400 uppercase tracking-widest">Chef's Notes</div>
-                                                <p className="text-sm text-slate-600 italic font-medium">
-                                                    "{req.notes}"
-                                                </p>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-end pt-2">
-                                            <Button variant="ghost" size="sm" className="h-9 px-4 rounded-lg font-bold text-emerald-600 gap-2 hover:bg-emerald-50">
-                                                <Send className="h-3.5 w-3.5" />
-                                                View Transaction Details
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                    <Card>
+                        <CardContent className="pt-6">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-sidebar-border/30 text-emerald-950 font-bold uppercase tracking-wider text-xs">
+                                            <th className="py-4 px-4">Req No</th>
+                                            <th className="py-4 px-4">Date</th>
+                                            <th className="py-4 px-4">Author</th>
+                                            <th className="py-4 px-4">Status</th>
+                                            <th className="py-4 px-4 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm">
+                                        {requisitions.map((req) => (
+                                            <React.Fragment key={req.id}>
+                                                <tr 
+                                                    className={`border-b border-sidebar-border/30 hover:bg-emerald-50/30 transition-colors group cursor-pointer ${expandedRows.has(req.id) ? 'bg-emerald-50/20' : ''}`}
+                                                    onClick={() => toggleRow(req.id)}
+                                                >
+                                                    <td className="py-4 px-4 font-black flex items-center gap-2 text-emerald-900">
+                                                        {expandedRows.has(req.id) ? <ChevronUp className="h-4 w-4 text-emerald-600" /> : <ChevronDown className="h-4 w-4 text-emerald-600" />}
+                                                        {req.requisitionNo}
+                                                    </td>
+                                                    <td className="py-4 px-4 font-medium text-muted-foreground whitespace-nowrap">
+                                                        {new Date(req.createdAt).toLocaleDateString()} {new Date(req.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                    </td>
+                                                    <td className="py-4 px-4 font-semibold text-slate-700">
+                                                        {req.author?.name || `Staff ID: ${req.staffId}`}
+                                                    </td>
+                                                    <td className="py-4 px-4">
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                                            req.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                                            req.status === 'ordered' ? 'bg-blue-100 text-blue-700' :
+                                                            req.status === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                                                            'bg-slate-100 text-slate-700'
+                                                        }`}>
+                                                            {req.status === 'ordered' ? 'purchased' : req.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-4 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                                        {req.status === 'approved' && (
+                                                            <Button 
+                                                                onClick={() => navigate(`/purchases?requisitionId=${req.id}`)}
+                                                                size="sm"
+                                                                className="h-8 px-3 rounded-md font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm"
+                                                            >
+                                                                <Send className="h-3 w-3" />
+                                                                Process
+                                                            </Button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                                {/* Expandable Child Row */}
+                                                {expandedRows.has(req.id) && (
+                                                    <tr className="bg-slate-50/50 border-b border-sidebar-border/30">
+                                                        <td colSpan={5} className="p-0">
+                                                            <div className="p-6 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                                    <div className="bg-white p-4 rounded-xl border border-emerald-100 shadow-sm">
+                                                                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600/70 mb-3 flex items-center gap-1.5">
+                                                                            <Leaf className="h-3 w-3" /> Required Raw Materials
+                                                                        </p>
+                                                                        <div className="space-y-2">
+                                                                            {req.items.map((item, idx) => (
+                                                                                <div key={idx} className="flex justify-between items-center text-sm border-b border-slate-50 pb-2 last:border-0 last:pb-0">
+                                                                                    <span className="font-bold text-slate-700">{item.ingredient.name}</span>
+                                                                                    <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-black text-xs">
+                                                                                        {item.quantity} {item.ingredient.unit}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                    {req.notes && (
+                                                                        <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100/50">
+                                                                            <p className="text-[10px] font-black uppercase tracking-widest text-amber-600/70 mb-3">Chef's Notes</p>
+                                                                            <p className="text-sm text-slate-600 italic font-medium leading-relaxed">
+                                                                                "{req.notes}"
+                                                                            </p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
             </div>
+
+            <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ClipboardList className="h-5 w-5 text-primary" />
+                            {selectedRequisition?.requisitionNo} Details
+                        </DialogTitle>
+                    </DialogHeader>
+                    {selectedRequisition && (
+                        <div className="space-y-6 pt-4">
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Requisition Items</p>
+                                <div className="space-y-3">
+                                    {selectedRequisition.items.map((item, idx) => (
+                                        <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                                            <span className="font-bold text-slate-700">{item.ingredient.name}</span>
+                                            <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-black text-xs">
+                                                {item.quantity} {item.ingredient.unit}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {selectedRequisition.notes && (
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chef's Notes</p>
+                                    <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 italic text-slate-600 text-sm">
+                                        "{selectedRequisition.notes}"
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-4 text-[10px] items-center pt-2 border-t">
+                                <div>
+                                    <p className="font-black text-slate-400 uppercase tracking-widest">Submitted By</p>
+                                    <p className="font-bold text-slate-600">{selectedRequisition.author?.name || `Staff ID: ${selectedRequisition.staffId}`}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="font-black text-slate-400 uppercase tracking-widest">Status</p>
+                                    <p className="font-bold text-emerald-600 uppercase italic">{selectedRequisition.status}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-2">
+                                <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>Close</Button>
+                                {selectedRequisition.status === 'approved' && (
+                                    <Button 
+                                        onClick={() => navigate(`/purchases?requisitionId=${selectedRequisition.id}`)}
+                                        className="bg-emerald-600 hover:bg-emerald-700 font-bold"
+                                    >
+                                        Process Purchase
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

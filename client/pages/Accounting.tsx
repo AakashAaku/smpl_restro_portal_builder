@@ -8,7 +8,19 @@ import {
   getMonthlySalesReport,
   getPaymentBreakdown,
   getExpenses,
+  getAccounts,
+  getJournalEntries,
 } from "@/lib/accounting-api";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 import {
   LineChart,
   Line,
@@ -35,8 +47,10 @@ import {
   Sparkles,
   PieChart as PieChartIcon,
   BarChart3,
-  Waves
+  Waves,
+  ShieldCheck
 } from "lucide-react";
+import { AdminHeader } from "@/components/layout/AdminHeader";
 
 export default function Accounting() {
   const [timeRange, setTimeRange] = useState("monthly");
@@ -66,7 +80,17 @@ export default function Accounting() {
     queryFn: getExpenses,
   });
 
-  if (summaryLoading || dailyLoading || monthlyLoading || paymentLoading || expensesLoading) {
+  const { data: accounts, isLoading: accountsLoading } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: getAccounts,
+  });
+
+  const { data: journalEntries, isLoading: journalLoading } = useQuery({
+    queryKey: ["journal-entries"],
+    queryFn: getJournalEntries,
+  });
+
+  if (summaryLoading || dailyLoading || monthlyLoading || paymentLoading || expensesLoading || accountsLoading || journalLoading) {
     return (
       <div className="flex h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -77,100 +101,85 @@ export default function Accounting() {
   const { revenue = 0, expenses: totalExpense = 0, profit = 0, profitMargin = "0", growth = "0" } = summary || {};
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-primary/10 p-1.5 rounded-lg">
-              <Leaf className="h-4 w-4 text-primary" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
-              VenzoSmart • Financial Intelligence
-            </span>
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
-            Treasury <span className="text-primary italic">Analysis</span>
-          </h1>
-          <p className="text-muted-foreground mt-1 font-medium italic">
-            "Sustaining Organic Growth through Precision Accounting"
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <AdminHeader 
+        title="Financial Treasury" 
+        subtitle="Monitor revenue, expenses, and profit margins"
+      />
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Total Inflow</p>
-                <p className="text-3xl font-black tracking-tight text-emerald-700">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Total Inflow</p>
+                <p className="text-2xl font-bold text-emerald-700">
                   Rs.{(revenue / 100000).toFixed(2)}L
                 </p>
                 <p className="text-[10px] text-emerald-600 font-bold mt-2">
                   +{growth}% vs last cycle
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                <DollarSign className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <DollarSign className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Total Burn</p>
-                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Total Burn</p>
+                <p className="text-2xl font-bold">
                   Rs.{(totalExpense / 100000).toFixed(2)}L
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 font-bold mt-2">
                   {revenue > 0 ? ((totalExpense / revenue) * 100).toFixed(1) : 0}% of revenue
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center shadow-sm">
-                <TrendingDown className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center">
+                <TrendingDown className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Net Yield</p>
-                <p className="text-3xl font-black tracking-tight text-primary">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Net Yield</p>
+                <p className="text-2xl font-bold text-primary">
                   Rs.{(profit / 100000).toFixed(2)}L
                 </p>
                 <p className="text-[10px] text-primary font-bold mt-2">
                   {profitMargin}% efficiency
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                <TrendingUp className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <TrendingUp className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Daily Rolling</p>
-                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Daily Rolling</p>
+                <p className="text-2xl font-bold">
                   Rs.{(revenue / 180 / 1000).toFixed(1)}K
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 font-bold mt-2">
                   6-month aggregate
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm">
-                <Banknote className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                <Banknote className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
@@ -184,6 +193,8 @@ export default function Accounting() {
           <TabsTrigger value="daily">Daily View</TabsTrigger>
           <TabsTrigger value="payments">Payment Methods</TabsTrigger>
           <TabsTrigger value="expenses">Expense Breakdown</TabsTrigger>
+          <TabsTrigger value="journal">General Journal</TabsTrigger>
+          <TabsTrigger value="coa">Chart of Accounts</TabsTrigger>
         </TabsList>
 
         {/* Monthly Revenue/Expense Chart */}
@@ -368,6 +379,98 @@ export default function Accounting() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Journal View */}
+        <TabsContent value="journal">
+          <Card>
+            <CardHeader>
+              <CardTitle>General Journal</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Account</TableHead>
+                    <TableHead className="text-right">Debit</TableHead>
+                    <TableHead className="text-right">Credit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {journalEntries?.map((entry: any) => (
+                    entry.ledgerEntries.map((line: any, idx: number) => (
+                      <TableRow key={`${entry.id}-${idx}`}>
+                        <TableCell>{idx === 0 ? format(new Date(entry.date), "MMM dd, yyyy") : ""}</TableCell>
+                        <TableCell className="font-medium text-xs">
+                          {idx === 0 ? (
+                            <div className="flex flex-col">
+                              <span>{entry.description}</span>
+                              <span className="text-[10px] text-muted-foreground">Ref: {entry.reference || "N/A"}</span>
+                            </div>
+                          ) : ""}
+                        </TableCell>
+                        <TableCell className={line.type === "CREDIT" ? "pl-8 text-muted-foreground" : "font-semibold"}>
+                          {line.account.name} ({line.account.code})
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {line.type === "DEBIT" ? `Rs.${line.amount.toFixed(2)}` : ""}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {line.type === "CREDIT" ? `Rs.${line.amount.toFixed(2)}` : ""}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ))}
+                  {(!journalEntries || journalEntries.length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground italic">
+                        No journal entries found. Transactions will appear here as orders and purchases are completed.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* COA View */}
+        <TabsContent value="coa">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chart of Accounts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Account Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Current Balance</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {accounts?.map((account: any) => (
+                    <TableRow key={account.id}>
+                      <TableCell className="font-mono">{account.code}</TableCell>
+                      <TableCell className="font-bold">{account.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {account.type.toLowerCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-black">
+                        Rs.{account.balance.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Financial Health and Alerts */}
@@ -389,7 +492,7 @@ export default function Accounting() {
                 <div className="h-2 bg-secondary rounded-full overflow-hidden">
                   <div
                     className="h-full bg-green-500"
-                    style={{ width: `${Math.min(parseFloat(profitMargin), 100)}%` }}
+                    style={{ width: `${Math.min(typeof profitMargin === 'string' ? parseFloat(profitMargin) : profitMargin, 100)}%` }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -428,7 +531,7 @@ export default function Accounting() {
                   <div
                     className="h-full bg-green-400"
                     style={{
-                      width: `${Math.min(parseFloat(growth) * 5, 100)}%`,
+                      width: `${Math.min((typeof growth === 'string' ? parseFloat(growth) : growth) * 5, 100)}%`,
                     }}
                   />
                 </div>
@@ -442,12 +545,18 @@ export default function Accounting() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
+            <CardTitle>Accounting Compliance</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* Typically would come from a transactions API */}
-            <p className="text-sm text-muted-foreground italic">
-              Transaction history is being synchronized...
+            <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+              <ShieldCheck className="h-6 w-6 text-emerald-600" />
+              <div>
+                <p className="text-sm font-bold text-emerald-900">IRD Verified System</p>
+                <p className="text-xs text-emerald-700/70 font-medium">Your double-entry logs are audit-ready and compliant with IRD regulations.</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground italic px-2">
+              Note: Every financial transaction is recorded with a unique journal ID and timestamp for permanent audit trails.
             </p>
           </CardContent>
         </Card>

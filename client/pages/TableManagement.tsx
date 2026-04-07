@@ -27,6 +27,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Download,
+  Printer,
+  QrCode,
   Users,
   Clock,
   CheckCircle,
@@ -40,11 +43,19 @@ import {
   Sparkles,
   LayoutGrid,
   MapPin,
-  CalendarCheck
+  CalendarCheck,
+  Scan
 } from "lucide-react";
 import { toast } from "sonner";
+import { AdminHeader } from "@/components/layout/AdminHeader";
 
 // Table interface is now imported from tables-api
+
+function generateQRCodeDataURL(tableNumber: string): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+    `${window.location.origin}/table-order?table=${tableNumber}`
+  )}`;
+}
 
 export default function TableManagement() {
   const queryClient = useQueryClient();
@@ -206,190 +217,159 @@ export default function TableManagement() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-primary/10 p-1.5 rounded-lg">
-              <Leaf className="h-4 w-4 text-primary" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
-              VenzoSmart • Floor Management
-            </span>
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
-            Table <span className="text-primary italic">Architecture</span>
-          </h1>
-          <p className="text-muted-foreground mt-1 font-medium italic">
-            "Optimizing the Organic Dining Experience"
-          </p>
-        </div>
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAddTable} className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
-              <Plus className="h-5 w-5" />
-              CONSTRUCT NEW TABLE
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingTable ? "Edit Table" : "Add New Table"}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <AdminHeader 
+        title="Table Architecture" 
+        subtitle="Manage restaurant floor layout and table availability"
+        actions={
+          <Dialog open={showDialog} onOpenChange={setShowDialog}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAddTable} className="font-bold gap-2">
+                <Plus className="h-4 w-4" />
+                CONSTRUCT NEW TABLE
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingTable ? "Edit Table" : "Add New Table"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Table Number</Label>
+                    <Input
+                      placeholder="e.g., A1, B2"
+                      value={formData.number}
+                      onChange={(e) =>
+                        setFormData({ ...formData, number: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Capacity</Label>
+                    <Select
+                      value={formData.capacity}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, capacity: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">2 Persons</SelectItem>
+                        <SelectItem value="4">4 Persons</SelectItem>
+                        <SelectItem value="6">6 Persons</SelectItem>
+                        <SelectItem value="8">8 Persons</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {editingTable?.status === "occupied" ||
+                  editingTable?.status === "reserved" ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Customer Name</Label>
+                      <Input
+                        placeholder="Customer name"
+                        value={formData.customerName}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            customerName: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Party Size</Label>
+                      <Input
+                        type="number"
+                        placeholder="Number of persons"
+                        value={formData.partySize}
+                        onChange={(e) =>
+                          setFormData({ ...formData, partySize: e.target.value })
+                        }
+                      />
+                    </div>
+                  </>
+                ) : null}
+
                 <div className="space-y-2">
-                  <Label htmlFor="number">Table Number</Label>
+                  <Label>Notes</Label>
                   <Input
-                    id="number"
-                    placeholder="e.g., A1, B2"
-                    value={formData.number}
+                    placeholder="Special requests, allergies, etc."
+                    value={formData.notes}
                     onChange={(e) =>
-                      setFormData({ ...formData, number: e.target.value })
+                      setFormData({ ...formData, notes: e.target.value })
                     }
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="capacity">Capacity</Label>
-                  <Select
-                    value={formData.capacity}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, capacity: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2">2 Persons</SelectItem>
-                      <SelectItem value="4">4 Persons</SelectItem>
-                      <SelectItem value="6">6 Persons</SelectItem>
-                      <SelectItem value="8">8 Persons</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
+                <Button onClick={handleSaveTable} className="w-full">
+                  {editingTable ? "Update Table" : "Add Table"}
+                </Button>
               </div>
-
-              {editingTable?.status === "occupied" ||
-                editingTable?.status === "reserved" ? (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="customerName">Customer Name</Label>
-                    <Input
-                      id="customerName"
-                      placeholder="Customer name"
-                      value={formData.customerName}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          customerName: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="customerPhone">Customer Phone</Label>
-                    <Input
-                      id="customerPhone"
-                      placeholder="Phone number"
-                      value={formData.customerPhone}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          customerPhone: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="partySize">Party Size</Label>
-                    <Input
-                      id="partySize"
-                      type="number"
-                      placeholder="Number of persons"
-                      value={formData.partySize}
-                      onChange={(e) =>
-                        setFormData({ ...formData, partySize: e.target.value })
-                      }
-                    />
-                  </div>
-                </>
-              ) : null}
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Input
-                  id="notes"
-                  placeholder="Special requests, allergies, etc."
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                />
-              </div>
-
-              <Button onClick={handleSaveTable} className="w-full">
-                {editingTable ? "Update Table" : "Add Table"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Available</p>
-                <p className="text-3xl font-black tracking-tight text-emerald-600">{availableCount}</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Available</p>
+                <p className="text-2xl font-bold text-emerald-600">{availableCount}</p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <CheckCircle className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Occupied</p>
-                <p className="text-3xl font-black tracking-tight text-blue-600">{occupiedCount}</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Occupied</p>
+                <p className="text-2xl font-bold text-blue-600">{occupiedCount}</p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+              <div className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                 <Users className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Booked</p>
-                <p className="text-3xl font-black tracking-tight text-amber-600">{reservedCount}</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Booked</p>
+                <p className="text-2xl font-bold text-amber-600">{reservedCount}</p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
+              <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
                 <Clock className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Sanitizing</p>
-                <p className="text-3xl font-black tracking-tight text-purple-600">{cleaningCount}</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Sanitizing</p>
+                <p className="text-2xl font-bold text-purple-600">{cleaningCount}</p>
               </div>
-              <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-sm">
+              <div className="h-10 w-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
                 <AlertCircle className="h-5 w-5" />
               </div>
             </div>
@@ -408,7 +388,7 @@ export default function TableManagement() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {tables.map((table) => (
               <div
                 key={table.id}
@@ -420,8 +400,15 @@ export default function TableManagement() {
               >
                 <div className="text-center mb-2">
                   <p className="text-xl font-bold">{table.number}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Capacity: {table.capacity}
+                  <div className="my-2 bg-white p-1 rounded border border-slate-100 shadow-inner flex justify-center">
+                    <img 
+                      src={generateQRCodeDataURL(table.number)} 
+                      alt="QR" 
+                      className="h-16 w-16 opacity-80 group-hover:opacity-100 transition-opacity" 
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-medium">
+                    Seats: {table.capacity}
                   </p>
                 </div>
 

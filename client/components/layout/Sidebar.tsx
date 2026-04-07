@@ -73,7 +73,8 @@ const navSections = [
   {
     title: "Administration",
     items: [
-      { href: "/admin/staff", icon: ChefHat, label: "Staff" },
+      { href: "/admin/staff", icon: ChefHat, label: "Staff (HR)" },
+      { href: "/admin/users", icon: Users2, label: "System Users" },
       { href: "/admin/production", icon: Users2, label: "Production" },
       { href: "/admin/settings", icon: Settings, label: "Settings" },
     ],
@@ -92,8 +93,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       // Admin sees everything
       if (isAdminUser) return true;
 
-      // Chef role specific access
-      if (role === "CHEF" || role === "chef") {
+      // Chef & Kitchen Staff specific access
+      if (role === "CHEF" || role === "chef" || role === "KITCHEN_STAFF") {
         const chefAllowed = [
           "/admin/dashboard",
           "/admin/orders",
@@ -103,6 +104,20 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           "/admin/requisition"
         ];
         return chefAllowed.includes(item.href);
+      }
+
+      // Reception specific access
+      if (role === "RECEPTION") {
+        const receptionAllowed = [
+          "/admin/dashboard",
+          "/admin/orders",
+          "/admin/tables",
+          "/admin/table-qr-codes",
+          "/admin/inventory",
+          "/admin/requisition",
+          "/admin/promotions"
+        ];
+        return receptionAllowed.includes(item.href);
       }
 
       // Other staff see basic operations
@@ -119,33 +134,27 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   }).filter(section => section.items.length > 0);
 
   return (
-    <aside className="h-full w-64 border-r border-sidebar-border bg-sidebar shadow-sm overflow-y-auto">
+    <aside className="h-full w-64 border-r border-sidebar-border bg-sidebar shadow-sm flex flex-col">
       {/* Logo */}
-      <div className="border-b border-sidebar-border px-6 py-10 bg-gradient-to-b from-sidebar to-sidebar/50">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-green-500 text-white shadow-lg organic-glow">
-            <Leaf className="h-10 w-10" />
+      <div className="border-b border-sidebar-border px-6 py-6 border-b-muted">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
+            <Leaf className="h-5 w-5" />
           </div>
-          <div>
-            <h1 className="font-extrabold text-sidebar-foreground text-2xl tracking-tighter">
-              VENZO<span className="text-primary">SMART</span>
+          <div className="flex flex-col">
+            <h1 className="font-bold text-sidebar-foreground text-lg leading-tight">
+              VenzoSmart
             </h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70 mt-1">
-              110% Pure Veg & Eggless
-            </p>
-            <p className="text-xs text-sidebar-foreground/50 mt-2 flex items-center justify-center gap-1">
-              <span className="h-1 w-1 rounded-full bg-emerald-400" />
-              Radhe Radhe, Bhaktapur
-            </p>
+            <span className="text-xs text-muted-foreground font-medium">Admin Portal</span>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-4 py-8 space-y-8">
+      <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
         {filteredSections.map((section) => (
-          <div key={section.title} className="space-y-3">
-            <p className="px-4 text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-[0.15em]">
+          <div key={section.title} className="space-y-2">
+            <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               {section.title}
             </p>
             <div className="space-y-1">
@@ -158,15 +167,15 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                     key={item.href}
                     to={item.href}
                     className={cn(
-                      "group flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200",
+                      "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-primary text-primary-foreground shadow-md ring-1 ring-primary/20 scale-[1.02]"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-primary hover:translate-x-1"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     )}
                   >
                     <Icon className={cn(
-                      "h-5 w-5 transition-transform duration-200 group-hover:scale-110",
-                      isActive ? "text-primary-foreground" : "text-primary/60"
+                      "h-4 w-4",
+                      isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-sidebar-foreground"
                     )} />
                     {item.label}
                   </Link>
@@ -178,7 +187,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-sidebar-border px-4 py-4">
+      <div className="border-t border-sidebar-border p-4">
         <LogoutButton />
       </div>
     </aside>
@@ -196,10 +205,10 @@ function LogoutButton() {
   return (
     <Button
       variant="ghost"
-      className="flex w-full items-center justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent/10"
+      className="flex w-full items-center justify-start gap-3 rounded-md text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
       onClick={handleLogout}
     >
-      <LogOut className="h-5 w-5" />
+      <LogOut className="h-4 w-4" />
       Logout
     </Button>
   );

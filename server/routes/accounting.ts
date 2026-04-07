@@ -152,6 +152,14 @@ export const createExpense: RequestHandler = async (req, res) => {
       },
     });
 
+    // Accounting Hook
+    try {
+      const { recordExpense } = await import("../lib/accounting-service");
+      await recordExpense(newExpense.id);
+    } catch (error) {
+      console.error(`Failed to record accounting entry for expense ${newExpense.id}:`, error);
+    }
+
     res.status(201).json(newExpense);
   } catch (error) {
     res.status(500).json({ error: "Failed to create expense" });
@@ -160,7 +168,7 @@ export const createExpense: RequestHandler = async (req, res) => {
 
 export const updateExpenseStatus: RequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { status } = req.body;
 
     const updatedExpense = await prisma.expense.update({
@@ -271,5 +279,32 @@ export const getProfitabilityReport: RequestHandler = async (_req, res) => {
   } catch (error) {
     console.error("Profitability Analysis Error:", error);
     res.status(500).json({ error: "Failed to fetch profitability analysis" });
+  }
+};
+
+export const getAccounts: RequestHandler = async (_req, res) => {
+  try {
+    const accounts = await prisma.account.findMany({
+      orderBy: { code: "asc" }
+    });
+    res.json(accounts);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch accounts" });
+  }
+};
+
+export const getJournalEntries: RequestHandler = async (_req, res) => {
+  try {
+    const entries = await prisma.journalEntry.findMany({
+      include: {
+        ledgerEntries: {
+          include: { account: true }
+        }
+      },
+      orderBy: { date: "desc" }
+    });
+    res.json(entries);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch journal entries" });
   }
 };

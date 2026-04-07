@@ -5,13 +5,32 @@ export const getCustomers: RequestHandler = async (_req, res) => {
   try {
     const customers = await prisma.customer.findMany({
       include: {
-        _count: {
-          select: { orders: true },
+        orders: {
+          select: { totalAmount: true },
         },
       },
       orderBy: { name: "asc" },
     });
-    res.json(customers);
+
+    const enrichedCustomers = customers.map(c => {
+      const totalOrders = c.orders.length;
+      const totalSpent = c.orders.reduce((sum, order) => sum + order.totalAmount, 0);
+      
+      let loyaltyTier = "Bronze";
+      if (totalSpent > 10000) loyaltyTier = "Platinum";
+      else if (totalSpent > 5000) loyaltyTier = "Gold";
+      else if (totalSpent > 2000) loyaltyTier = "Silver";
+
+      return {
+        ...c,
+        totalOrders,
+        totalSpent,
+        loyaltyTier,
+        status: c.isVip ? "vip" : totalOrders > 0 ? "active" : "inactive"
+      };
+    });
+
+    res.json(enrichedCustomers);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch customers" });
   }
@@ -19,7 +38,7 @@ export const getCustomers: RequestHandler = async (_req, res) => {
 
 export const getCustomerById: RequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const customer = await prisma.customer.findUnique({
       where: { id },
       include: {
@@ -58,7 +77,13 @@ export const createCustomer: RequestHandler = async (req, res) => {
       },
     });
 
-    res.status(201).json(newCustomer);
+    res.status(201).json({
+      ...newCustomer,
+      totalOrders: 0,
+      totalSpent: 0,
+      loyaltyTier: "Bronze",
+      status: "inactive"
+    });
   } catch (error) {
     res.status(500).json({ error: "Failed to create customer" });
   }
@@ -66,7 +91,7 @@ export const createCustomer: RequestHandler = async (req, res) => {
 
 export const updateCustomer: RequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { name, phone, email, isVip } = req.body;
 
     const updatedCustomer = await prisma.customer.update({
@@ -91,7 +116,7 @@ export const updateCustomer: RequestHandler = async (req, res) => {
 
 export const addLoyaltyPoints: RequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { points } = req.body;
 
     if (points === undefined) {
@@ -116,7 +141,7 @@ export const addLoyaltyPoints: RequestHandler = async (req, res) => {
 
 export const redeemLoyaltyPoints: RequestHandler = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { points } = req.body;
 
     if (points === undefined) {

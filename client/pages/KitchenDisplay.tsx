@@ -1,41 +1,38 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getOrders, updateOrderStatus, Order } from "@/lib/orders";
+import { getOrders, updateOrderStatus } from "@/lib/orders";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
     Clock,
     CheckCircle,
-    ChefHat,
-    AlertCircle,
     Play,
     Check,
-    Timer,
     RefreshCw,
     Bell,
-    Leaf,
-    Sparkles
+    ChefHat
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
 export default function KitchenDisplay() {
     const queryClient = useQueryClient();
-    const [filter, setFilter] = useState<string>("active"); // active, completed
+    const [filter, setFilter] = useState<string>("active");
 
-    const { data: orders = [], isLoading, refetch } = useQuery({
+    const { data: ordersData, isLoading, refetch } = useQuery({
         queryKey: ["orders", "kitchen"],
-        queryFn: getOrders,
-        refetchInterval: 10000, // Auto-refresh every 10 seconds for real-time feel
+        queryFn: () => getOrders(1, 100),
+        refetchInterval: 10000, 
     });
+
+    const orders = ordersData?.orders || [];
 
     const statusMutation = useMutation({
         mutationFn: ({ id, status }: { id: string; status: any }) => updateOrderStatus(id, status),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["orders"] });
             toast.success("Order status updated");
-            // Play a subtle sound or notify
         },
         onError: (error: any) => {
             toast.error(error.message || "Failed to update status");
@@ -60,135 +57,131 @@ export default function KitchenDisplay() {
 
     const getWaitTimeColor = (createdAt: string) => {
         const mins = (Date.now() - new Date(createdAt).getTime()) / 60000;
-        if (mins > 20) return "text-destructive animate-pulse font-black";
-        if (mins > 10) return "text-amber-500 font-bold";
-        return "text-muted-foreground";
+        if (mins > 20) return "text-red-500 font-bold animate-pulse";
+        if (mins > 10) return "text-amber-500 font-semibold";
+        return "text-slate-400";
     };
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-                <RefreshCw className="h-12 w-12 animate-spin text-primary" />
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p className="text-slate-400 font-medium">Connecting to kitchen ticker...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#02100a] text-slate-50 p-6 font-sans">
-            {/* KDS Header */}
-            <header className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+        <div className="min-h-screen bg-slate-950 text-slate-50 p-6">
+            {/* Header */}
+            <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 pb-6 border-b border-slate-800">
                 <div className="flex items-center gap-4">
-                    <div className="bg-primary p-3 rounded-2xl shadow-[0_0_20px_rgba(5,150,105,0.3)] organic-glow">
-                        <Leaf className="h-8 w-8 text-white" />
+                    <div className="bg-slate-800 p-2.5 rounded-md border border-slate-700">
+                        <ChefHat className="h-6 w-6 text-slate-300" />
                     </div>
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">VenzoSmart Culinary</span>
-                        </div>
-                        <h1 className="text-4xl font-extrabold tracking-tighter uppercase italic text-white">Kitchen <span className="text-primary">Intelligence</span></h1>
-                        <p className="text-emerald-500/60 font-medium text-xs tracking-wide">Live Organic Fulfillment Stream • {activeOrders.length} Passive Orders</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-50">Kitchen Display System</h1>
+                        <p className="text-slate-400 text-sm mt-0.5">{activeOrders.length} {filter} orders</p>
                     </div>
                 </div>
 
-                <div className="flex bg-[#051a11] p-1.5 rounded-2xl border border-emerald-900/30 shadow-2xl">
+                <div className="flex items-center bg-slate-900 p-1.5 rounded-lg border border-slate-800">
                     <Button
                         variant={filter === "active" ? "default" : "ghost"}
                         onClick={() => setFilter("active")}
-                        className={`rounded-xl px-8 font-black uppercase tracking-wider text-xs h-10 ${filter === 'active' ? 'bg-primary text-white' : 'text-emerald-500/50 hover:text-primary'}`}
+                        className={`text-sm h-9 px-6 ${filter === 'active' ? 'bg-primary text-primary-foreground' : 'text-slate-400 hover:text-slate-200'}`}
                     >
-                        ACTIVE BATCHES
+                        Active Queue
                     </Button>
                     <Button
                         variant={filter === "completed" ? "default" : "ghost"}
                         onClick={() => setFilter("completed")}
-                        className={`rounded-xl px-8 font-black uppercase tracking-wider text-xs h-10 ${filter === 'completed' ? 'bg-primary text-white' : 'text-emerald-500/50 hover:text-primary'}`}
+                        className={`text-sm h-9 px-6 ${filter === 'completed' ? 'bg-primary text-primary-foreground' : 'text-slate-400 hover:text-slate-200'}`}
                     >
-                        FINALIZED
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => refetch()} className="ml-2 rounded-xl text-emerald-500/50 hover:text-primary">
-                        <RefreshCw className="h-5 w-5" />
+                        Completed
                     </Button>
                 </div>
             </header>
 
-            {/* Order Grid */}
+            {/* Orders */}
             {activeOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-40 opacity-20">
-                    <Bell className="h-32 w-32 mb-6" />
-                    <h2 className="text-3xl font-black uppercase">All clear, Chef!</h2>
+                <div className="flex flex-col items-center justify-center py-32 text-slate-500">
+                    <Bell className="h-16 w-16 mb-4 opacity-50" />
+                    <h2 className="text-xl font-medium">No active orders</h2>
+                    <p className="text-sm mt-2">Kitchen queue is clear</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {activeOrders.map((order) => (
-                        <Card key={order.id} className="bg-[#051a11] border-2 border-emerald-900/20 overflow-hidden flex flex-col shadow-2xl premium-card group">
-                            <CardHeader className="p-4 border-b border-emerald-900/10 bg-[#062216]/50 flex flex-row justify-between items-start">
+                        <Card key={order.id} className="bg-slate-900 border border-slate-800 flex flex-col shadow-lg rounded-lg overflow-hidden">
+                            <CardHeader className="p-4 border-b border-slate-800 bg-slate-900/50 flex flex-row items-center justify-between pb-3">
                                 <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-2xl font-black text-white tracking-tighter">{order.orderNumber}</span>
-                                        <Badge variant="outline" className={`${getStatusColor(order.status)} font-black text-[10px] uppercase tracking-widest px-2 py-0.5`}>{order.status}</Badge>
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <span className="text-lg font-bold text-slate-50">#{order.orderNumber}</span>
+                                        <Badge variant="outline" className={`text-[10px] font-semibold uppercase px-2 py-0.5 ${getStatusColor(order.status)}`}>
+                                            {order.status}
+                                        </Badge>
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-500/70 uppercase tracking-tight">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                                        <span>Table {order.tableNumber || "POS"}</span>
-                                    </div>
+                                    <p className="text-xs font-medium text-slate-400">
+                                        {order.tableNumber ? `Table ${order.tableNumber}` : "Takeaway / POS"}
+                                    </p>
                                 </div>
-                                <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest ${getWaitTimeColor(order.createdAt)}`}>
-                                    <Clock className="h-3.5 w-3.5" />
+                                <div className={`flex flex-col items-end gap-1 text-xs font-medium ${getWaitTimeColor(order.createdAt)}`}>
+                                    <Clock className="h-4 w-4 mb-0.5" />
                                     {formatDistanceToNow(new Date(order.createdAt))}
                                 </div>
                             </CardHeader>
 
-                            <CardContent className="p-4 flex-1 space-y-4">
-                                <div className="space-y-3">
-                                    {order.orderItems.map((item, idx) => (
-                                        <div key={idx} className="flex justify-between items-center group/item">
-                                            <div className="flex items-center gap-3">
-                                                <span className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black border border-primary/20 group-hover/item:border-primary transition-colors">
+                            <CardContent className="p-5 flex-1">
+                                <div className="space-y-4">
+                                    {order.orderItems?.map((item, idx) => (
+                                        <div key={idx} className="flex justify-between items-start">
+                                            <div className="flex items-start gap-3">
+                                                <span className="h-6 w-6 rounded bg-slate-800 flex items-center justify-center text-sm font-semibold text-slate-300 border border-slate-700 shrink-0 mt-0.5">
                                                     {item.quantity}
                                                 </span>
-                                                <span className="font-bold text-lg text-emerald-50 group-hover:text-white transition-colors">
+                                                <span className="text-base font-medium text-slate-200 leading-tight">
                                                     {item.name || item.menuItem?.name}
                                                 </span>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-
                                 {order.customerName && (
-                                    <div className="pt-4 mt-4 border-t border-slate-800/50">
-                                        <p className="text-[10px] uppercase font-black text-slate-500 mb-1 tracking-widest">Customer</p>
-                                        <p className="text-sm font-bold text-slate-300">{order.customerName}</p>
+                                    <div className="mt-6 pt-4 border-t border-slate-800">
+                                        <p className="text-xs text-slate-400">Customer: <span className="text-slate-200 font-medium">{order.customerName}</span></p>
                                     </div>
                                 )}
                             </CardContent>
 
-                            <div className="p-4 bg-[#062216]/50 border-t border-emerald-900/10 gap-3 grid grid-cols-1">
+                            <div className="p-4 bg-slate-900/80 border-t border-slate-800">
                                 {order.status === "PENDING" || order.status === "CONFIRMED" ? (
                                     <Button
-                                        className="w-full h-14 bg-primary hover:bg-emerald-500 text-white font-black uppercase tracking-tighter text-lg rounded-2xl gap-3 shadow-xl transition-all hover:scale-[1.02]"
+                                        className="w-full text-sm font-semibold"
                                         onClick={() => statusMutation.mutate({ id: order.id, status: "PREPARING" })}
                                         disabled={statusMutation.isPending}
                                     >
-                                        <Play className="h-6 w-6 fill-current" />
-                                        EXECUTE PREP
+                                        <Play className="h-4 w-4 mr-2" />
+                                        Start Preparing
                                     </Button>
                                 ) : order.status === "PREPARING" ? (
                                     <Button
-                                        className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-tighter text-lg rounded-2xl gap-3 shadow-xl transition-all hover:scale-[1.02]"
+                                        variant="default"
+                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold"
                                         onClick={() => statusMutation.mutate({ id: order.id, status: "READY" })}
                                         disabled={statusMutation.isPending}
                                     >
-                                        <CheckCircle className="h-6 w-6" />
-                                        READY FOR PICKUP
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Mark as Ready
                                     </Button>
                                 ) : (
                                     <Button
                                         variant="outline"
-                                        className="w-full h-14 border-emerald-900/30 bg-[#051a11]/50 text-emerald-500/40 font-black uppercase rounded-2xl cursor-not-allowed"
+                                        className="w-full text-sm font-semibold bg-slate-800/50 border-slate-700 text-slate-400 cursor-not-allowed"
                                         disabled
                                     >
-                                        <Check className="h-6 w-6" />
-                                        COLLECTED
+                                        <Check className="h-4 w-4 mr-2" />
+                                        Completed
                                     </Button>
                                 )}
                             </div>

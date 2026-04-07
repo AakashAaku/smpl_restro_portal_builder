@@ -1,5 +1,5 @@
 export interface Customer {
-    id: number;
+    id: string;
     name: string;
     phone: string;
     email?: string;
@@ -10,37 +10,20 @@ export interface Customer {
     status: "active" | "inactive" | "vip";
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "/api";
-const API_CUSTOMERS = `${API_URL}/customers`;
+import { api } from './api-client';
 
 export const getCustomers = async (): Promise<Customer[]> => {
-    const response = await fetch(API_CUSTOMERS);
-    if (!response.ok) throw new Error("Failed to fetch customers");
-    return response.json();
+    return api.get("/customers");
 };
 
 export const createCustomer = async (customer: Partial<Customer>): Promise<Customer> => {
-    const response = await fetch(API_CUSTOMERS, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(customer),
-    });
-    if (!response.ok) throw new Error("Failed to create customer");
-    return response.json();
+    return api.post("/customers", customer);
 };
 
-export const updateCustomer = async (id: number, customer: Partial<Customer>): Promise<Customer> => {
-    const response = await fetch(`${API_CUSTOMERS}/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(customer),
-    });
-    if (!response.ok) throw new Error("Failed to update customer");
-    return response.json();
+export const updateCustomer = async (id: string, customer: Partial<Customer>): Promise<Customer> => {
+    return api.put(`/customers/${id}`, customer);
 };
 
 export const getCustomerStats = async () => {
-    const response = await fetch(`${API_CUSTOMERS}/stats`);
-    if (!response.ok) throw new Error("Failed to fetch customer stats");
-    return response.json();
+    return api.get("/customers/stats");
 };

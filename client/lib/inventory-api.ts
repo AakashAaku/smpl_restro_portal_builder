@@ -53,11 +53,11 @@ export interface Supplier {
 export interface StockMovement {
     id: number;
     ingredientId: number;
+    ingredientName?: string;
     type: "IN" | "OUT";
     quantity: number;
-    reference: string;
-    timestamp: string;
-    notes?: string;
+    reason?: string;
+    date: string;
 }
 
 export const getIngredients = async (): Promise<Ingredient[]> => {
@@ -92,7 +92,7 @@ export const deleteSupplier = async (id: number): Promise<void> => {
     return api.delete(`/inventory/suppliers/${id}`);
 };
 
-export const recordStockMovement = async (movement: Omit<StockMovement, "id" | "timestamp">): Promise<StockMovement> => {
+export const recordStockMovement = async (movement: Omit<StockMovement, "id" | "date" | "ingredientName">): Promise<StockMovement> => {
     return api.post("/inventory/stock-movement", movement);
 };
 
@@ -100,6 +100,7 @@ export const getInventoryStats = async () => {
     return api.get("/inventory/value");
 };
 
-export const getStockMovements = async (): Promise<StockMovement[]> => {
-    return api.get("/inventory/stock-movements");
+export const getStockMovements = async (ingredientId?: number): Promise<StockMovement[]> => {
+    const url = ingredientId ? `/inventory/stock-movements?ingredientId=${ingredientId}` : "/inventory/stock-movements";
+    return api.get(url);
 };

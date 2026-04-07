@@ -43,24 +43,26 @@ export const getFinishedGoods: RequestHandler = async (_req, res) => {
 
 export const createFinishedGood: RequestHandler = async (req, res) => {
     try {
-        const { name, category, price, prepTime, description, recipe } = req.body;
+        const { name, category, price, sellingPrice, prepTime, description, recipe } = req.body;
 
-        if (!name || !category || price === undefined) {
+        if (!name || !category || (price === undefined && sellingPrice === undefined)) {
             res.status(400).json({ error: "Missing required fields" });
             return;
         }
+
+        const finalPrice = price !== undefined ? price : sellingPrice;
 
         const newGood = await prisma.menuItem.create({
             data: {
                 name,
                 category,
-                price: parseFloat(price),
+                price: parseFloat(finalPrice.toString()),
                 prepTime: parseInt(prepTime || 15),
                 description,
                 recipes: {
                     create: recipe?.map((r: any) => ({
                         ingredientId: r.ingredientId,
-                        quantity: parseFloat(r.quantity),
+                        quantity: parseFloat((r.quantity || r.quantityRequired).toString()),
                     })),
                 },
             },
@@ -68,14 +70,15 @@ export const createFinishedGood: RequestHandler = async (req, res) => {
 
         res.status(201).json(newGood);
     } catch (error) {
+        console.error("Create Finished Good Error:", error);
         res.status(500).json({ error: "Failed to create finished good" });
     }
 };
 
 export const updateFinishedGood: RequestHandler = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { name, category, price, description, recipe } = req.body;
+        const id = req.params.id as string;
+        const { name, category, price, sellingPrice, description, recipe } = req.body;
 
         // First delete old recipes if providing new one
         if (recipe) {
@@ -84,17 +87,19 @@ export const updateFinishedGood: RequestHandler = async (req, res) => {
             });
         }
 
+        const finalPrice = price !== undefined ? price : (sellingPrice !== undefined ? sellingPrice : undefined);
+
         const updatedGood = await prisma.menuItem.update({
             where: { id: parseInt(id) },
             data: {
                 name,
                 category,
-                price: price !== undefined ? parseFloat(price) : undefined,
+                price: finalPrice !== undefined ? parseFloat(finalPrice.toString()) : undefined,
                 description,
                 recipes: recipe ? {
                     create: recipe.map((r: any) => ({
                         ingredientId: r.ingredientId,
-                        quantity: parseFloat(r.quantity),
+                        quantity: parseFloat((r.quantity || r.quantityRequired).toString()),
                     })),
                 } : undefined,
             },
@@ -102,13 +107,14 @@ export const updateFinishedGood: RequestHandler = async (req, res) => {
 
         res.json(updatedGood);
     } catch (error) {
+        console.error("Update Finished Good Error:", error);
         res.status(500).json({ error: "Failed to update finished good" });
     }
 };
 
 export const produceFinishedGood: RequestHandler = async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const { quantity } = req.body;
 
         const prodQuantity = parseFloat(quantity || 1);
@@ -125,6 +131,15 @@ export const produceFinishedGood: RequestHandler = async (req, res) => {
             // Deduct ingredients from stock
             for (const recipeItem of menuItem.recipes) {
                 const needed = recipeItem.quantity * prodQuantity;
+                
+                const ingredient = await tx.ingredient.findUnique({
+                    where: { id: recipeItem.ingredientId },
+                });
+
+                if (!ingredient || ingredient.currentStock < needed) {
+                    throw new Error(`Insufficient stock for ${ingredient?.name || 'ingredient'}. Need ${needed.toFixed(2)}, have ${ingredient?.currentStock?.toFixed(2) || 0}.`);
+                }
+
                 await tx.ingredient.update({
                     where: { id: recipeItem.ingredientId },
                     data: {

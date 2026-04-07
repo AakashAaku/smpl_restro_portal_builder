@@ -100,7 +100,8 @@ export default function CustomerCheckout() {
         taxAmount: bill.vatAmount,
         totalAmount: bill.totalAmount,
         paymentMethod: paymentMethod,
-        orderType: "DELIVERY",
+        orderType: "ONLINE",
+        source: "CUSTOMER",
         address: address,
         customerPan: customerPan || undefined,
         bill: bill

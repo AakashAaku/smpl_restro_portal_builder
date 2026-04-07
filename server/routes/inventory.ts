@@ -86,8 +86,27 @@ export const updateIngredient: RequestHandler = async (req, res) => {
 export const deleteIngredient: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
+    const ingredientId = parseInt(id as string);
+
+    // Check for usages
+    const usages = await Promise.all([
+      prisma.purchaseItem.count({ where: { ingredientId } }),
+      prisma.recipe.count({ where: { ingredientId } }),
+      prisma.requisitionItem.count({ where: { ingredientId } })
+    ]);
+
+    const totalUsages = usages.reduce((a, b) => a + b, 0);
+
+    if (totalUsages > 0) {
+      res.status(400).json({ 
+        error: "Cannot delete material", 
+        details: "This material is used in existing purchases, recipes, or requisitions. Please remove those dependencies first." 
+      });
+      return;
+    }
+
     await prisma.ingredient.delete({
-      where: { id: parseInt(id as string) },
+      where: { id: ingredientId },
     });
     res.json({ message: "Ingredient deleted" });
   } catch (error) {
@@ -140,7 +159,7 @@ export const updateSupplier: RequestHandler = async (req, res) => {
     const { name, contact, email, address } = req.body;
 
     const updated = await prisma.supplier.update({
-      where: { id: parseInt(id) },
+      where: { id: parseInt(id as string) },
       data: { name, contact, email, address },
     });
 
@@ -154,7 +173,7 @@ export const deleteSupplier: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.supplier.delete({
-      where: { id: parseInt(id) },
+      where: { id: parseInt(id as string) },
     });
     res.json({ message: "Supplier deleted" });
   } catch (error) {
@@ -218,9 +237,12 @@ export const getInventoryValue: RequestHandler = async (_req, res) => {
   }
 };
 
-export const getStockMovements: RequestHandler = async (_req, res) => {
+export const getStockMovements: RequestHandler = async (req, res) => {
   try {
+    const { ingredientId } = req.query;
+    const whereClause = ingredientId ? { ingredientId: parseInt(ingredientId as string) } : {};
     const movements = await prisma.stockMovement.findMany({
+      where: whereClause,
       include: { ingredient: true },
       orderBy: { date: "desc" },
     });

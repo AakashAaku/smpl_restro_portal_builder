@@ -1,8 +1,9 @@
 import { api } from './api-client';
 import { BillDetails } from "./billing";
 
-export type OrderStatus = "PENDING" | "CONFIRMED" | "PREPARING" | "READY" | "SERVED" | "CANCELLED";
-export type OrderType = "DELIVERY" | "DINE_IN" | "TAKEAWAY";
+export type OrderStatus = "PENDING" | "CONFIRMED" | "PREPARING" | "READY" | "SERVED" | "COMPLETED" | "CANCELLED";
+export type OrderType = "DINING" | "TAKEAWAY" | "ONLINE";
+export type OrderSource = "ADMIN" | "CUSTOMER";
 
 export interface OrderItem {
   id?: number;
@@ -20,7 +21,8 @@ export interface Order {
   id: string;
   orderNumber: string;
   billNo?: string;
-  orderType?: OrderType;
+  orderType: OrderType;
+  source: OrderSource;
   tableId?: number;
   tableNumber?: string;
   customerId?: string;
@@ -28,12 +30,24 @@ export interface Order {
   orderItems: OrderItem[];
   totalAmount: number;
   status: OrderStatus;
+  paymentMethod?: string;
+  paymentStatus?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export const getOrders = async (): Promise<Order[]> => {
-  return api.get("/orders");
+export interface PaginatedOrders {
+  orders: Order[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export const getOrders = async (page: number = 1, limit: number = 25): Promise<PaginatedOrders> => {
+  return api.get(`/orders?page=${page}&limit=${limit}`);
 };
 
 export const getOrderById = async (id: string): Promise<Order> => {

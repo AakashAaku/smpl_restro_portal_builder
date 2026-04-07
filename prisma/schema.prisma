@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(STAFF)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String
+  name         String
+  role         Role          @default(STAFF)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  requisitions Requisition[]
 }
 
 model MenuItem {
@@ -92,6 +93,7 @@ model Purchase {
   id            Int            @id @default(autoincrement())
   supplierId    Int
   totalAmount   Float
+  paymentMethod String?        @default("cash") // cash, credit, cheque
   status        String         @default("completed")
   invoiceNo     String?
   notes         String?
@@ -99,6 +101,8 @@ model Purchase {
   date          DateTime       @default(now())
   supplier      Supplier       @relation(fields: [supplierId], references: [id])
   purchaseItems PurchaseItem[]
+  requisitionId Int?
+  requisition   Requisition?   @relation(fields: [requisitionId], references: [id])
 }
 
 model PurchaseItem {
@@ -145,6 +149,8 @@ model Order {
   customerId    String?
   tableId       Int?
   status        OrderStatus   @default(PENDING)
+  orderType     OrderType     @default(DINING)
+  source        OrderSource   @default(ADMIN)
   totalAmount   Float
   paymentMethod String?
   paymentStatus PaymentStatus @default(PENDING)
@@ -153,6 +159,7 @@ model Order {
   customer      Customer?     @relation(fields: [customerId], references: [id])
   table         Table?        @relation(fields: [tableId], references: [id])
   orderItems    OrderItem[]
+  journalEntries JournalEntry[]
 }
 
 model OrderItem {
@@ -224,6 +231,7 @@ model Staff {
   status            String   @default("active")
 }
 
+
 model Asset {
   id           Int      @id @default(autoincrement())
   name         String
@@ -235,15 +243,40 @@ model Asset {
   updatedAt    DateTime @updatedAt
 }
 
+model PrepList {
+  id        Int        @id @default(autoincrement())
+  date      DateTime   @default(now())
+  shift     String     // morning, afternoon, evening
+  status    String     @default("pending") // pending, in-progress, completed
+  items     PrepItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model PrepItem {
+  id             Int      @id @default(autoincrement())
+  prepListId     Int
+  prepList       PrepList @relation(fields: [prepListId], references: [id], onDelete: Cascade)
+  itemName       String
+  category       String
+  expectedOrders Int
+  prepQuantity   Float
+  prepTime       Int
+  assignedTo     String?
+  status         String   @default("pending") // pending, in-progress, completed
+}
+
 model Requisition {
   id           Int               @id @default(autoincrement())
   requisitionNo String           @unique
-  staffId      Int
+  staffId      String
+  author       User?             @relation(fields: [staffId], references: [id])
   status       String            @default("pending") // pending, approved, rejected, ordered
   items        RequisitionItem[]
   notes        String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+  purchases    Purchase[]
 }
 
 model RequisitionItem {
@@ -261,6 +294,8 @@ enum Role {
   CHEF
   WAITER
   CUSTOMER
+  KITCHEN_STAFF
+  RECEPTION
 }
 
 enum OrderStatus {
@@ -283,4 +318,61 @@ enum PaymentStatus {
 enum MovementType {
   IN
   OUT
+}
+
+enum OrderType {
+  DINING
+  TAKEAWAY
+  ONLINE
+}
+
+enum OrderSource {
+  ADMIN
+  CUSTOMER
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+model Account {
+  id          Int           @id @default(autoincrement())
+  code        String        @unique
+  name        String        @unique
+  type        AccountType
+  description String?
+  balance     Float         @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  ledgerEntries LedgerEntry[]
+}
+
+model JournalEntry {
+  id          Int           @id @default(autoincrement())
+  date        DateTime      @default(now())
+  description String
+  reference   String?       // Reference ID for the transaction (e.g., Order Number, Purchase ID)
+  order       Order?        @relation(fields: [orderId], references: [id])
+  orderId     String?
+  createdAt   DateTime      @default(now())
+  ledgerEntries LedgerEntry[]
+}
+
+model LedgerEntry {
+  id             Int          @id @default(autoincrement())
+  journalEntryId Int
+  accountId      Int
+  amount         Float        // Always positive
+  type           EntryType    // DEBIT or CREDIT
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account        Account      @relation(fields: [accountId], references: [id])
+}
+
+enum EntryType {
+  DEBIT
+  CREDIT
 }

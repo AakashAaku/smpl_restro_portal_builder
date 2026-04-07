@@ -20,6 +20,7 @@ import {
 import { useState, useEffect } from "react";
 import { Plus, Clock, TrendingUp, AlertCircle, Loader2, Leaf, Sparkles, ChefHat, Timer, Zap, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
+import { AdminHeader } from "@/components/layout/AdminHeader";
 import {
   getPrepLists,
   createPrepList,
@@ -81,10 +82,34 @@ export default function Production() {
   const handleAddPrepList = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // In a real app, we'd collect form data here
-      // For now, this is a placeholder for the API call
-      toast.info("Create Prep List functionality will be fully implemented with form fields");
+      if (forecast.length === 0) {
+        toast.error("No forecast data available to create prep list");
+        return;
+      }
+
+      // Collect form values
+      const form = e.target as HTMLFormElement;
+      const date = (form.querySelector('input[type="date"]') as HTMLInputElement).value;
+      const shift = (form.querySelector('button[role="combobox"] span') as HTMLElement)?.innerText.split(' ')[0].toLowerCase() as any;
+      const expectedOrders = parseInt((form.querySelector('input[type="number"]') as HTMLInputElement).value) || 50;
+
+      const payload = {
+        date,
+        shift: shift || "morning",
+        items: forecast.map(f => ({
+          itemName: f.itemName,
+          category: f.category,
+          expectedOrders: Math.round(f.expectedOrders * (expectedOrders / 50)), // Scale based on input
+          prepQuantity: Math.round(f.prepQuantity * (expectedOrders / 50)),
+          prepTime: f.prepTime || 30,
+          status: "pending"
+        }))
+      };
+
+      await createPrepList(payload);
+      toast.success("Production prep list generated successfully");
       setIsAddingPrepList(false);
+      loadData();
     } catch (error) {
       toast.error("Failed to create prep list");
     }
@@ -92,8 +117,16 @@ export default function Production() {
 
   const handleStatusUpdate = async (prepListId: number, itemId: number, newStatus: string) => {
     try {
-      await updatePrepItemStatus(prepListId, itemId, newStatus);
-      toast.success("Status updated");
+      const response = await updatePrepItemStatus(prepListId, itemId, newStatus);
+      toast.success(`Item marked as ${newStatus}`);
+      
+      // Check for inventory alerts
+      if (response && response.alerts && response.alerts.length > 0) {
+          response.alerts.forEach((alertMsg: string) => {
+              toast.error(alertMsg, { duration: 8000 });
+          });
+      }
+
       loadData();
     } catch (error) {
       toast.error("Failed to update status");
@@ -109,147 +142,112 @@ export default function Production() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-primary/10 p-1.5 rounded-lg">
-              <Leaf className="h-4 w-4 text-primary" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
-              VenzoSmart • Culinary Operations
-            </span>
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
-            Production <span className="text-primary italic">Planning</span>
-          </h1>
-          <p className="text-muted-foreground mt-1 font-medium italic">
-            "Precision Preparation for 110% Pure Veg Excellence"
-          </p>
-        </div>
-        <Dialog open={isAddingPrepList} onOpenChange={setIsAddingPrepList}>
-          <DialogTrigger asChild>
-            <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
-              <Plus className="h-5 w-5" />
-              GENERATE PREP LIST
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Prep List</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddPrepList} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="prep-date">Date</Label>
-                <Input
-                  id="prep-date"
-                  type="date"
-                  defaultValue={new Date().toISOString().split("T")[0]}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="prep-shift">Shift</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select shift" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="morning">Morning (6 AM - 12 PM)</SelectItem>
-                    <SelectItem value="afternoon">
-                      Afternoon (12 PM - 6 PM)
-                    </SelectItem>
-                    <SelectItem value="evening">
-                      Evening (6 PM - 12 AM)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="prep-forecast">Expected Orders</Label>
-                <Input
-                  id="prep-forecast"
-                  type="number"
-                  placeholder="50"
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddingPrepList(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Create Prep List</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+    <div className="space-y-6">
+      <AdminHeader 
+        title="Production Planning" 
+        subtitle="Manage preparatory list and demand forecasting"
+        actions={
+          <Dialog open={isAddingPrepList} onOpenChange={setIsAddingPrepList}>
+            <DialogTrigger asChild>
+              <Button className="font-bold gap-2">
+                <Plus className="h-4 w-4" />
+                GENERATE PREP LIST
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Prep List</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddPrepList} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Input
+                    type="date"
+                    defaultValue={new Date().toISOString().split("T")[0]}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Shift</Label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select shift" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="morning">Morning (6 AM - 12 PM)</SelectItem>
+                      <SelectItem value="afternoon">Afternoon (12 PM - 6 PM)</SelectItem>
+                      <SelectItem value="evening">Evening (6 PM - 12 AM)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Expected Orders</Label>
+                  <Input type="number" placeholder="50" />
+                </div>
+                <Button type="submit" className="w-full">Create Prep List</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Queue Density</p>
-                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{totalPrepItems}</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Queue Density</p>
+                <p className="text-2xl font-bold">{totalPrepItems}</p>
                 <p className="text-[10px] text-emerald-600 font-bold mt-2">{completedItems} finalized cycles</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
-                <ClipboardList className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <ClipboardList className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Active Prep</p>
-                <p className="text-3xl font-black tracking-tight text-amber-600">{inProgressItems}</p>
-                <p className="text-[10px] text-amber-600 font-bold mt-2">Current kitchen activity</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Active Prep</p>
+                <p className="text-2xl font-bold text-amber-600">{inProgressItems}</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
-                <Timer className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Timer className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Labor Commitment</p>
-                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Labor Commitment</p>
+                <p className="text-2xl font-bold">
                   {Math.round(totalPrepTime / 60)}<span className="text-sm text-muted-foreground">h</span>
                 </p>
-                <p className="text-[10px] text-blue-600 font-bold mt-2">Allocated preparation time</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
-                <Clock className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Clock className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Efficiency</p>
-                <p className="text-3xl font-black tracking-tight text-emerald-700">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Efficiency</p>
+                <p className="text-2xl font-bold text-emerald-700">
                   {totalPrepItems > 0 ? Math.round((completedItems / totalPrepItems) * 100) : 0}%
                 </p>
-                <p className="text-[10px] text-emerald-600 font-bold mt-2">Plan adherence rate</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
-                <Zap className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Zap className="h-5 w-5" />
               </div>
             </div>
           </CardContent>

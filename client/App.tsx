@@ -19,6 +19,7 @@ import OrderManagement from "./pages/OrderManagement";
 import Inventory from "./pages/Inventory";
 import Customers from "./pages/Customers";
 import Staff from "./pages/Staff";
+import UserManagement from "./pages/UserManagement";
 import Reports from "./pages/Reports";
 import Production from "./pages/Production";
 import Settings from "./pages/Settings";
@@ -175,6 +176,14 @@ const App = () => {
               element={
                 <AdminRoute>
                   <Staff />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <AdminRoute>
+                  <UserManagement />
                 </AdminRoute>
               }
             />

@@ -22,10 +22,27 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Fusion Starter server running on port ${port}`);
-  console.log(`📱 Frontend: http://localhost:${port}`);
-  console.log(`🔧 API: http://localhost:${port}/api`);
+import os from "os";
+
+// Find local IPv4 address
+const getLocalIpAddress = () => {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]!) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return "localhost";
+};
+
+app.listen(port, "0.0.0.0", () => {
+  const ip = getLocalIpAddress();
+  console.log(`🚀 Fusion Starter server securely running on port ${port}`);
+  console.log(`💻 Local Access: http://localhost:${port}`);
+  console.log(`📱 Network (WiFi) Access: http://${ip}:${port}`);
+  console.log(`🔧 API: http://${ip}:${port}/api`);
 });
 
 // Graceful shutdown

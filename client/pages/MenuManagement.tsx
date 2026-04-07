@@ -16,7 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit2, Trash2, Search, ChefHat, X, Leaf, Sparkles } from "lucide-react";
+import { Plus, Search, Filter, Sparkles, Pencil, Trash2, Loader2, Leaf, ChefHat, Edit2, X } from "lucide-react";
+import { AdminHeader } from "@/components/layout/AdminHeader";
 import { useState, useEffect } from "react";
 import {
   MenuItem,
@@ -200,138 +201,125 @@ export default function MenuManagement() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-primary/10 p-1.5 rounded-lg">
-              <Leaf className="h-4 w-4 text-primary" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
-              VenzoSmart • Culinary Database
-            </span>
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
-            Menu <span className="text-primary italic">Catalogue</span>
-          </h1>
-          <p className="text-muted-foreground mt-1 font-medium italic">
-            "110% Pure Veg & Eggless Excellence"
-          </p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
-              <Plus className="h-5 w-5" />
-              CRAFT NEW ITEM
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {editingId ? "Edit Menu Item" : "Add New Menu Item"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Item Name</Label>
-                <Input
-                  id="name"
-                  required
-                  value={formState.name}
-                  onChange={(e) => setFormState({ ...formState, name: e.target.value })}
-                  placeholder="e.g., Butter Chicken"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <AdminHeader 
+        title="Menu Catalogue" 
+        subtitle="Manage your restaurant menu items and categories"
+        actions={
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button className="font-bold gap-2">
+                <Plus className="h-4 w-4" />
+                ADD NEW ITEM
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingId ? "Edit Menu Item" : "Add New Menu Item"}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select
-                    value={formState.category}
-                    onValueChange={(val) => setFormState({ ...formState, category: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formState.status}
-                    onValueChange={(val: any) => setFormState({ ...formState, status: val })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="unavailable">Unavailable</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price (Rs.)</Label>
+                  <Label htmlFor="name">Item Name</Label>
                   <Input
-                    id="price"
-                    type="number"
+                    id="name"
                     required
-                    value={formState.price}
-                    onChange={(e) => setFormState({ ...formState, price: parseFloat(e.target.value) })}
-                    placeholder="250"
+                    value={formState.name}
+                    onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                    placeholder="e.g., Butter Chicken"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select
+                      value={formState.category}
+                      onValueChange={(val) => setFormState({ ...formState, category: val })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={formState.status}
+                      onValueChange={(val: any) => setFormState({ ...formState, status: val })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="available">Available</SelectItem>
+                        <SelectItem value="unavailable">Unavailable</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price (Rs.)</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      required
+                      value={formState.price}
+                      onChange={(e) => setFormState({ ...formState, price: parseFloat(e.target.value) })}
+                      placeholder="250"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="preptime">Prep Time (min)</Label>
+                    <Input
+                      id="preptime"
+                      type="number"
+                      required
+                      value={formState.prepTime}
+                      onChange={(e) => setFormState({ ...formState, prepTime: parseInt(e.target.value) })}
+                      placeholder="20"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="preptime">Prep Time (min)</Label>
-                  <Input
-                    id="preptime"
-                    type="number"
-                    required
-                    value={formState.prepTime}
-                    onChange={(e) => setFormState({ ...formState, prepTime: parseInt(e.target.value) })}
-                    placeholder="20"
+                  <Label htmlFor="description">Description (Optional)</Label>
+                  <textarea
+                    id="description"
+                    placeholder="Item description"
+                    value={formState.description}
+                    onChange={(e) => setFormState({ ...formState, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+                    rows={3}
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
-                <textarea
-                  id="description"
-                  placeholder="Item description"
-                  value={formState.description}
-                  onChange={(e) => setFormState({ ...formState, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background"
-                  rows={3}
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  {editingId ? "Update Item" : "Add Item"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    {editingId ? "Update Item" : "Add Item"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       {/* Filters */}
       <div className="flex gap-4 items-end flex-wrap">
@@ -371,15 +359,9 @@ export default function MenuManagement() {
       </div>
 
       {/* Items Table */}
-      <Card className="premium-card border-none shadow-2xl overflow-hidden">
-        <CardHeader className="border-b border-sidebar-border/50 bg-emerald-50/30">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl font-extrabold tracking-tight">Active Menu Items ({filteredItems.length})</CardTitle>
-            <div className="flex items-center gap-2 text-[10px] font-black text-emerald-600 bg-white px-3 py-1 rounded-full shadow-sm border border-emerald-100">
-              <Sparkles className="h-3 w-3" />
-              ALL ITEMS ARE VEG
-            </div>
-          </div>
+      <Card className="border shadow-sm overflow-hidden">
+        <CardHeader className="bg-muted/50">
+          <CardTitle className="text-lg font-bold">Active Menu Items ({filteredItems.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (

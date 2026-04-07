@@ -17,14 +17,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Plus, TrendingUp, TrendingDown, DollarSign, Package, Calendar, Loader2, Leaf, History, Sparkles, Filter, Edit2, Trash2 } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, Package, Calendar, Loader2, Leaf, History, Sparkles, Filter, Edit2, Trash2, Send, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   getPurchases,
   recordPurchase,
   updatePurchase,
   deletePurchase,
+  returnPurchase,
   getPurchaseStats,
   type Purchase
 } from "@/lib/purchase-api";
@@ -32,41 +35,93 @@ import {
   getIngredients,
   type Ingredient
 } from "@/lib/inventory-api";
+import { getRequisitions, Requisition as RequisitionType } from "@/lib/requisitions-api";
 
 export default function PurchaseManagement() {
+  const [searchParams] = useSearchParams();
+  const requisitionIdString = searchParams.get("requisitionId");
+  const requisitionId = requisitionIdString ? parseInt(requisitionIdString) : undefined;
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [requisitions, setRequisitions] = useState<RequisitionType[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingPurchase, setIsAddingPurchase] = useState(false);
   const [isEditingPurchase, setIsEditingPurchase] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [selectedIngredient, setSelectedIngredient] = useState("");
+
+  // Requisition selection
+  const [selectedRequisitionId, setSelectedRequisitionId] = useState<string>("");
+
+  // Multi-item support
+  const [purchaseItems, setPurchaseItems] = useState<{
+    ingredientId: string;
+    ingredientName: string;
+    unit: string;
+    quantity: string;
+    unitPrice: string;
+  }[]>([]);
+
   const [formData, setFormData] = useState({
-    quantity: "",
-    unitPrice: "",
     supplier: "",
     purchaseDate: new Date().toISOString().split("T")[0],
     expiryDate: "",
     invoiceNo: "",
     notes: "",
+    paymentMethod: "cash",
   });
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (requisitionId && ingredients.length > 0) {
+      handleRequisitionPreFill();
+    }
+  }, [requisitionId, ingredients]);
+
+  const handleRequisitionPreFill = async (id?: number) => {
+    const targetId = id || requisitionId;
+    if (!targetId) return;
+
+    try {
+      const data = await getRequisitions();
+      const req = data.find(r => r.id === targetId);
+      if (req && req.items.length > 0) {
+        setPurchaseItems(req.items.map(item => ({
+          ingredientId: item.ingredientId.toString(),
+          ingredientName: item.ingredient.name,
+          unit: item.ingredient.unit,
+          quantity: item.quantity.toString(),
+          unitPrice: (item.ingredient.unitPrice || 0).toString()
+        })));
+
+        setSelectedRequisitionId(req.id.toString());
+        setFormData(prev => ({
+          ...prev,
+          notes: `From ${req.requisitionNo}: ${req.notes || "No notes provided"}`
+        }));
+        setIsAddingPurchase(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch requisition for pre-fill", error);
+    }
+  };
+
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [ingData, purData, statsData] = await Promise.all([
+      const [ingData, purData, statsData, reqData] = await Promise.all([
         getIngredients(),
         getPurchases(),
-        getPurchaseStats()
+        getPurchaseStats(),
+        getRequisitions()
       ]);
       setIngredients(ingData);
       setPurchases(purData);
       setStats(statsData);
+      setRequisitions(reqData.filter(r => r.status === 'approved' || r.status === 'pending'));
     } catch (error) {
       toast.error("Failed to load purchase data");
       console.error(error);
@@ -75,26 +130,44 @@ export default function PurchaseManagement() {
     }
   };
 
-  const handleDeletePurchase = async (id: string) => {
+  const handleDeletePurchase = async (id: string, status: string) => {
+    if (status === "completed") {
+      toast.error("Completed purchases cannot be deleted. Please use 'Return' to reverse stock.");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this purchase? This will reverse the stock increment.")) return;
     try {
       await deletePurchase(id);
       toast.success("Purchase deleted and stock reversed");
       loadData();
-    } catch (error) {
-      toast.error("Failed to delete purchase");
+    } catch (error: any) {
+      toast.error(error.response?.data?.details || "Failed to delete purchase");
+    }
+  };
+
+  const handleReturnPurchase = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to return the purchase for ${name}? This will reverse the stock inflow.`)) return;
+
+    try {
+      await returnPurchase(id);
+      toast.success("Purchase returned and stock reversed");
+      loadData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.details || "Failed to return purchase");
     }
   };
 
   const handleUpdatePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingId) return;
+    if (!editingId || purchaseItems.length === 0) return;
+    const item = purchaseItems[0];
     try {
       await updatePurchase(editingId, {
         ...formData,
-        quantity: parseFloat(formData.quantity),
-        unitPrice: parseFloat(formData.unitPrice),
-        ingredientId: parseInt(selectedIngredient)
+        quantity: parseFloat(item.quantity),
+        unitPrice: parseFloat(item.unitPrice),
+        ingredientId: parseInt(item.ingredientId)
       });
       toast.success("Purchase updated and stock adjusted");
       setIsEditingPurchase(false);
@@ -106,43 +179,81 @@ export default function PurchaseManagement() {
 
   const openEditDialog = (purchase: Purchase) => {
     setEditingId(purchase.id);
-    setSelectedIngredient(purchase.ingredientId.toString());
-    setFormData({
+    setPurchaseItems([{
+      ingredientId: purchase.ingredientId.toString(),
+      ingredientName: purchase.ingredientName,
+      unit: purchase.unit,
       quantity: purchase.quantity.toString(),
-      unitPrice: purchase.unitPrice.toString(),
+      unitPrice: purchase.unitPrice.toString()
+    }]);
+    setFormData({
       supplier: purchase.supplier,
       purchaseDate: purchase.purchaseDate.split("T")[0],
       expiryDate: purchase.expiryDate ? purchase.expiryDate.split("T")[0] : "",
       invoiceNo: purchase.invoiceNo || "",
       notes: purchase.notes || "",
+      paymentMethod: purchase.paymentMethod || "cash",
     });
     setIsEditingPurchase(true);
+  };
+
+  const addPurchaseItem = () => {
+    setPurchaseItems([...purchaseItems, {
+      ingredientId: "",
+      ingredientName: "",
+      unit: "unit",
+      quantity: "1",
+      unitPrice: "0"
+    }]);
+  };
+
+  const removePurchaseItem = (index: number) => {
+    setPurchaseItems(purchaseItems.filter((_, i) => i !== index));
+  };
+
+  const updatePurchaseItem = (index: number, field: string, value: string) => {
+    const updated = [...purchaseItems];
+    const item = { ...updated[index], [field]: value };
+
+    // If selecting an existing ingredient, auto-fill name and unit
+    if (field === 'ingredientId' && value !== 'new') {
+      const ing = ingredients.find(i => i.id.toString() === value);
+      if (ing) {
+        item.ingredientName = ing.name;
+        item.unit = ing.unit;
+        item.unitPrice = ing.unitPrice.toString();
+      }
+    }
+
+    updated[index] = item;
+    setPurchaseItems(updated);
   };
 
   const handleAddPurchase = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedIngredient || !formData.quantity || !formData.unitPrice || !formData.supplier) {
-      toast.error("Please fill in all required fields");
+    if (purchaseItems.length === 0 || !formData.supplier || purchaseItems.some(i => !i.quantity || !i.unitPrice || (!i.ingredientId && !i.ingredientName))) {
+      toast.error("Please fill in all required fields and add at least one item");
       return;
     }
 
-    const ingredient = ingredients.find((i) => i.id.toString() === selectedIngredient);
-    if (!ingredient) return;
-
     try {
       await recordPurchase({
-        ingredientId: ingredient.id,
-        ingredientName: ingredient.name,
-        quantity: parseFloat(formData.quantity),
-        unit: ingredient.unit,
-        unitPrice: parseFloat(formData.unitPrice),
-        totalCost: parseFloat(formData.quantity) * parseFloat(formData.unitPrice),
         supplier: formData.supplier,
         purchaseDate: formData.purchaseDate,
         expiryDate: formData.expiryDate || undefined,
         invoiceNo: formData.invoiceNo || undefined,
         notes: formData.notes || undefined,
+        paymentMethod: formData.paymentMethod,
+        requisitionId: selectedRequisitionId ? parseInt(selectedRequisitionId) : undefined,
+        items: purchaseItems.map(item => ({
+          ingredientId: item.ingredientId ? parseInt(item.ingredientId) : undefined,
+          ingredientName: item.ingredientName,
+          quantity: parseFloat(item.quantity),
+          unitPrice: parseFloat(item.unitPrice),
+          unit: item.unit,
+          totalCost: parseFloat(item.quantity) * parseFloat(item.unitPrice)
+        }))
       });
 
       toast.success("Purchase recorded successfully");
@@ -150,15 +261,15 @@ export default function PurchaseManagement() {
 
       // Reset form
       setFormData({
-        quantity: "",
-        unitPrice: "",
         supplier: "",
         purchaseDate: new Date().toISOString().split("T")[0],
         expiryDate: "",
         invoiceNo: "",
         notes: "",
+        paymentMethod: "cash",
       });
-      setSelectedIngredient("");
+      setPurchaseItems([]);
+      setSelectedRequisitionId("");
       loadData();
     } catch (error: any) {
       toast.error(`Failed to record purchase: ${error.message || "Unknown error"}`);
@@ -207,129 +318,234 @@ export default function PurchaseManagement() {
               NEW PROCUREMENT
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
             <DialogHeader>
               <DialogTitle>Record New Purchase</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleAddPurchase} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="material">Raw Material *</Label>
-                <Select value={selectedIngredient} onValueChange={setSelectedIngredient}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select raw material" />
+            <form onSubmit={handleAddPurchase} className="space-y-6">
+              {/* Requisition Selector */}
+              <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <RotateCcw className="h-4 w-4 text-emerald-600" />
+                  <Label className="font-bold text-emerald-800">Source from Requisition</Label>
+                </div>
+                <Select
+                  value={selectedRequisitionId}
+                  onValueChange={(val) => {
+                    handleRequisitionPreFill(parseInt(val));
+                  }}
+                >
+                  <SelectTrigger className="bg-white border-emerald-200">
+                    <SelectValue placeholder="Select a pending requisition (Optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ingredients.map((ingredient) => (
-                      <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
-                        {ingredient.name} ({ingredient.unit})
+                    <SelectItem value="none">Manual Purchase (No Requisition)</SelectItem>
+                    {requisitions
+                      .filter(req => req.status !== 'ordered')
+                      .map((req) => (
+                      <SelectItem key={req.id} value={req.id.toString()}>
+                        {req.requisitionNo} - {new Date(req.createdAt).toLocaleDateString()} ({req.items.length} items)
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-[10px] text-emerald-600 font-medium italic">
+                  * Selecting a requisition will auto-populate items and mark the request as fulfilled upon saving.
+                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="font-extrabold text-base uppercase tracking-tight">Purchase Items</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addPurchaseItem}
+                    className="h-8 rounded-lg font-bold border-dashed border-2 hover:border-primary hover:text-primary transition-all"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    ADD MORE
+                  </Button>
+                </div>
+
+                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20">
+                  {purchaseItems.map((item, index) => (
+                    <Card key={index} className="relative bg-slate-50/50 border-none shadow-sm group">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white shadow-sm text-rose-500 hover:text-rose-700 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        onClick={() => removePurchaseItem(index)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                      <CardContent className="p-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] uppercase font-black text-muted-foreground">Select Material</Label>
+                            <Select
+                              value={item.ingredientId}
+                              onValueChange={(val) => updatePurchaseItem(index, 'ingredientId', val)}
+                            >
+                              <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="Choose Ingredient" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="new" className="font-bold text-primary">+ NEW RAW MATERIAL</SelectItem>
+                                {ingredients.map((ing) => (
+                                  <SelectItem key={ing.id} value={ing.id.toString()}>
+                                    {ing.name} ({ing.unit})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {!item.ingredientId || item.ingredientId === 'new' ? (
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] uppercase font-black text-muted-foreground">Custom Name</Label>
+                              <Input
+                                value={item.ingredientName}
+                                onChange={(e) => updatePurchaseItem(index, 'ingredientName', e.target.value)}
+                                placeholder="Material Name"
+                                className="bg-white"
+                              />
+                            </div>
+                          ) : null}
+                          {item.ingredientId && item.ingredientId !== 'new' && (
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] uppercase font-black text-muted-foreground">Unit</Label>
+                              <Input
+                                value={item.unit}
+                                disabled
+                                className="bg-slate-100 opacity-60"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] uppercase font-black text-muted-foreground">Quantity</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.quantity}
+                              onChange={(e) => updatePurchaseItem(index, 'quantity', e.target.value)}
+                              placeholder="0.00"
+                              className="bg-white"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] uppercase font-black text-muted-foreground">Unit Price (Rs.)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.unitPrice}
+                              onChange={(e) => updatePurchaseItem(index, 'unitPrice', e.target.value)}
+                              placeholder="0.00"
+                              className="bg-white"
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {purchaseItems.length === 0 && (
+                    <div className="text-center py-6 border-2 border-dashed border-slate-200 rounded-xl">
+                      <p className="text-sm text-muted-foreground">No items added. Click 'Add More' or select a requisition.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2 border-t border-slate-100">
                 <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantity *</Label>
+                  <Label htmlFor="supplier" className="font-bold">Supplier Info *</Label>
                   <Input
-                    id="quantity"
-                    type="number"
-                    step="0.01"
-                    value={formData.quantity}
+                    id="supplier"
+                    value={formData.supplier}
                     onChange={(e) =>
-                      setFormData({ ...formData, quantity: e.target.value })
+                      setFormData({ ...formData, supplier: e.target.value })
                     }
-                    placeholder="10"
+                    placeholder="Partner name"
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="purchaseDate" className="font-bold">Purchase Date</Label>
+                    <Input
+                      id="purchaseDate"
+                      type="date"
+                      value={formData.purchaseDate}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          purchaseDate: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="invoiceNo" className="font-bold">Invoice No.</Label>
+                    <Input
+                      id="invoiceNo"
+                      value={formData.invoiceNo}
+                      onChange={(e) =>
+                        setFormData({ ...formData, invoiceNo: e.target.value })
+                      }
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="unitPrice">Unit Price (Rs.) *</Label>
+                  <Label htmlFor="notes" className="font-bold">Notes / Description</Label>
                   <Input
-                    id="unitPrice"
-                    type="number"
-                    step="0.01"
-                    value={formData.unitPrice}
+                    id="notes"
+                    value={formData.notes}
                     onChange={(e) =>
-                      setFormData({ ...formData, unitPrice: e.target.value })
+                      setFormData({ ...formData, notes: e.target.value })
                     }
-                    placeholder="100"
+                    placeholder="Optional details"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Supplier *</Label>
-                <Input
-                  id="supplier"
-                  value={formData.supplier}
-                  onChange={(e) =>
-                    setFormData({ ...formData, supplier: e.target.value })
-                  }
-                  placeholder="Supplier name"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="purchaseDate">Purchase Date *</Label>
-                  <Input
-                    id="purchaseDate"
-                    type="date"
-                    value={formData.purchaseDate}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        purchaseDate: e.target.value,
-                      })
-                    }
-                  />
+                  <Label htmlFor="paymentMethod" className="font-bold">Payment Method</Label>
+                  <Select
+                    value={formData.paymentMethod}
+                    onValueChange={(val) => setFormData({ ...formData, paymentMethod: val })}
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Select payment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash Settlement</SelectItem>
+                      <SelectItem value="credit">On Credit Account</SelectItem>
+                      <SelectItem value="cheque">Bank Cheque</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expiryDate">Expiry Date</Label>
-                  <Input
-                    id="expiryDate"
-                    type="date"
-                    value={formData.expiryDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, expiryDate: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="invoiceNo">Invoice No.</Label>
-                <Input
-                  id="invoiceNo"
-                  value={formData.invoiceNo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, invoiceNo: e.target.value })
-                  }
-                  placeholder="INV-001"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Input
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  placeholder="Additional notes"
-                />
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"
                   variant="outline"
+                  className="rounded-xl h-12 px-6 font-bold"
                   onClick={() => setIsAddingPurchase(false)}
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Record Purchase</Button>
+                <Button
+                  type="submit"
+                  className="rounded-xl h-12 px-8 font-black shadow-lg shadow-primary/20"
+                >
+                  RECORD PROCUREMENT
+                </Button>
               </div>
             </form>
           </DialogContent>
@@ -342,18 +558,10 @@ export default function PurchaseManagement() {
             <form onSubmit={handleUpdatePurchase} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-material">Raw Material *</Label>
-                <Select value={selectedIngredient} onValueChange={setSelectedIngredient}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select raw material" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ingredients.map((ingredient) => (
-                      <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
-                        {ingredient.name} ({ingredient.unit})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="font-bold text-emerald-900">{purchaseItems[0]?.ingredientName || "Loading..."}</p>
+                  <p className="text-xs text-muted-foreground uppercase font-black">Fixed Material</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -363,10 +571,8 @@ export default function PurchaseManagement() {
                     id="edit-quantity"
                     type="number"
                     step="0.01"
-                    value={formData.quantity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, quantity: e.target.value })
-                    }
+                    value={purchaseItems[0]?.quantity || ""}
+                    onChange={(e) => updatePurchaseItem(0, 'quantity', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -375,10 +581,8 @@ export default function PurchaseManagement() {
                     id="edit-unitPrice"
                     type="number"
                     step="0.01"
-                    value={formData.unitPrice}
-                    onChange={(e) =>
-                      setFormData({ ...formData, unitPrice: e.target.value })
-                    }
+                    value={purchaseItems[0]?.unitPrice || ""}
+                    onChange={(e) => updatePurchaseItem(0, 'unitPrice', e.target.value)}
                   />
                 </div>
               </div>
@@ -551,14 +755,16 @@ export default function PurchaseManagement() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="text-left py-3 px-4 font-medium">Material</th>
-                        <th className="text-left py-3 px-4 font-medium">Quantity</th>
-                        <th className="text-left py-3 px-4 font-medium">Unit Price</th>
-                        <th className="text-left py-3 px-4 font-medium">Total Cost</th>
-                        <th className="text-left py-3 px-4 font-medium">Supplier</th>
-                        <th className="text-left py-3 px-4 font-medium">Date</th>
-                        <th className="text-left py-3 px-4 font-medium">Expiry</th>
-                        <th className="text-right py-3 px-4 font-medium">Actions</th>
+                        <th className="text-left py-3 px-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60">Reference</th>
+                        <th className="text-left py-3 px-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60">Material</th>
+                        <th className="text-left py-3 px-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60">Quantity</th>
+                        <th className="text-left py-3 px-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60">Unit Price</th>
+                        <th className="text-left py-3 px-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60">Total Cost</th>
+                        <th className="text-left py-3 px-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60">Supplier</th>
+                        <th className="text-left py-3 px-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60">Payment</th>
+                        <th className="text-left py-3 px-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60">Date</th>
+                        <th className="text-left py-3 px-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60">Status</th>
+                        <th className="text-right py-3 px-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground/60">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -567,6 +773,18 @@ export default function PurchaseManagement() {
                           key={purchase.id}
                           className="border-b border-sidebar-border/30 hover:bg-emerald-50/30 transition-colors group"
                         >
+                          <td className="py-4 px-4">
+                            {purchase.requisitionNo ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 italic">
+                                  {purchase.requisitionNo}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] font-bold text-muted-foreground/30 italic">Manual</span>
+                            )}
+                          </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center font-black text-[10px] text-emerald-600 border border-emerald-100">
@@ -587,17 +805,28 @@ export default function PurchaseManagement() {
                               {purchase.supplier}
                             </span>
                           </td>
+                          <td className="py-4 px-4">
+                            <span className={cn(
+                              "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border shadow-sm",
+                              purchase.paymentMethod === "credit" ? "bg-amber-50 text-amber-600 border-amber-100" :
+                                purchase.paymentMethod === "cheque" ? "bg-blue-50 text-blue-600 border-blue-100" :
+                                  "bg-emerald-50 text-emerald-600 border-emerald-100"
+                            )}>
+                              {purchase.paymentMethod || "cash"}
+                            </span>
+                          </td>
                           <td className="py-4 px-4 text-xs font-medium text-muted-foreground">
                             {new Date(purchase.purchaseDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                           </td>
                           <td className="py-4 px-4">
-                            {purchase.expiryDate ? (
-                              <span className="text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 px-2 py-0.5 rounded border border-rose-100">
-                                {new Date(purchase.expiryDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold text-muted-foreground/40">NO EXPIRY</span>
-                            )}
+                            <span className={cn(
+                              "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border shadow-sm",
+                              purchase.status === "completed" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                                purchase.status === "returned" ? "bg-amber-50 text-amber-600 border-amber-100" :
+                                  "bg-slate-50 text-slate-600 border-slate-100"
+                            )}>
+                              {purchase.status}
+                            </span>
                           </td>
                           <td className="py-4 px-4 text-right">
                             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -609,14 +838,27 @@ export default function PurchaseManagement() {
                               >
                                 <Edit2 className="h-4 w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                                onClick={() => handleDeletePurchase(purchase.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              {purchase.status === "completed" ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  title="Return Purchase"
+                                  onClick={() => handleReturnPurchase(purchase.id, purchase.ingredientName)}
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              ) : null}
+                              {purchase.status !== "completed" ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                  onClick={() => handleDeletePurchase(purchase.id, purchase.status)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              ) : null}
                             </div>
                           </td>
                         </tr>

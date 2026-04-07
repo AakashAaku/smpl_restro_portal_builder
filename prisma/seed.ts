@@ -58,90 +58,12 @@ async function main() {
         },
     });
 
-    const ingredientsData = [
-        { name: 'Fresh Paneer', unit: 'kg', price: 750 },
-        { name: 'Button Mushroom', unit: 'kg', price: 400 },
-        { name: 'Soya Chaap', unit: 'kg', price: 350 },
-        { name: 'Cashew Nuts', unit: 'kg', price: 1200 },
-        { name: 'Fresh Cream (Eggless)', unit: 'ltr', price: 450 },
-        { name: 'Basmati Rice', unit: 'kg', price: 180 },
-        { name: 'Green Peas', unit: 'kg', price: 120 },
-    ];
+    // 2. Clear dummy ingredients if any (optional, but requested by user to have clean start)
+    // We already have upserts, so we can just empty the arrays if we want a clean slate for new users
+    const ingredientsData: any[] = []; 
+    const menuItemsData: any[] = [];
 
-    const ingredients: Record<string, number> = {};
-
-    for (const ing of ingredientsData) {
-        const created = await (prisma.ingredient as any).upsert({
-            where: { name: ing.name },
-            update: { unitPrice: ing.price },
-            create: {
-                name: ing.name,
-                unit: ing.unit,
-                currentStock: 0,
-                minStock: 10,
-                unitPrice: ing.price,
-            },
-        });
-        ingredients[ing.name] = created.id;
-    }
-
-    // 3. Menu Items (110% Pure Veg & Eggless)
-    const menuItemsData = [
-        {
-            name: 'Paneer Butter Masala (Eggless)',
-            category: 'Main Course',
-            price: 450,
-            desc: 'Creamy tomato-based paneer curry, 100% pure veg and eggless.',
-            recipe: [{ name: 'Fresh Paneer', qty: 0.2 }, { name: 'Fresh Cream (Eggless)', qty: 0.05 }]
-        },
-        {
-            name: 'Mushroom Duplex',
-            category: 'Starters',
-            price: 380,
-            desc: 'Stuffed mushrooms with cheese and herbs.',
-            recipe: [{ name: 'Button Mushroom', qty: 0.25 }]
-        },
-        {
-            name: 'Veg Dum Biryani',
-            category: 'Rice & Biryani',
-            price: 350,
-            desc: 'Fragrant basmati rice cooked with fresh seasonal vegetables.',
-            recipe: [{ name: 'Basmati Rice', qty: 0.3 }, { name: 'Green Peas', qty: 0.1 }]
-        },
-        {
-            name: 'Soya Chaap Tikka',
-            category: 'Starters',
-            price: 320,
-            desc: 'Marinated soya chunks grilled to perfection.',
-            recipe: [{ name: 'Soya Chaap', qty: 0.2 }]
-        }
-    ];
-
-    for (const item of menuItemsData) {
-        await (prisma.menuItem as any).upsert({
-            where: { name: item.name },
-            update: {
-                price: item.price,
-                description: item.desc,
-                category: item.category
-            },
-            create: {
-                name: item.name,
-                category: item.category,
-                price: item.price,
-                description: item.desc,
-                prepTime: 15,
-                recipes: {
-                    create: item.recipe.map(r => ({
-                        ingredientId: ingredients[r.name],
-                        quantity: r.qty
-                    }))
-                }
-            },
-        });
-    }
-
-    console.log('Seed finished: 110% PURE VEG COMPLIANCE VERIFIED.');
+    console.log('Seed finished: ADMIN USERS READY.');
 }
 
 main()

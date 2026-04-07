@@ -58,6 +58,8 @@ import {
   getExpenses,
   createExpense,
   updateExpenseStatus,
+  getAccounts,
+  getJournalEntries,
 } from "./routes/accounting";
 import {
   getPurchases,
@@ -66,12 +68,14 @@ import {
   deletePurchase,
   getPurchaseStats,
   getPurchasesByIngredient,
+  returnPurchase,
 } from "./routes/purchases";
 import {
   getFinishedGoods,
   createFinishedGood,
   updateFinishedGood,
   produceFinishedGood,
+  getProductionRecords,
 } from "./routes/finished-goods";
 import {
   getTables,
@@ -96,7 +100,14 @@ import {
   updateAsset,
   deleteAsset,
 } from "./routes/assets";
+import {
+  getPrepLists,
+  createPrepList,
+  updatePrepItemStatus,
+  getForecast,
+} from "./routes/production";
 import { login, getMe } from "./routes/auth";
+import userRoutes from "./routes/users";
 import { authenticateJWT, authorizeRoles } from "./middleware/auth";
 import { Role } from "@prisma/client";
 
@@ -125,6 +136,7 @@ export function createServer() {
   app.use("/api/staff", staffRoutes);
   app.use("/api/promotions", promotionRoutes);
   app.use("/api/settings", settingsRoutes);
+  app.use("/api/users", authenticateJWT, authorizeRoles(Role.ADMIN), userRoutes);
 
   // Menu Management Routes
   app.get("/api/menu", getMenuItems);
@@ -179,6 +191,8 @@ export function createServer() {
   app.get("/api/accounting/payment-breakdown", authenticateJWT, authorizeRoles(Role.ADMIN), getPaymentBreakdown);
   app.get("/api/accounting/tax-report", authenticateJWT, authorizeRoles(Role.ADMIN), getTaxReport);
   app.get("/api/accounting/profitability", authenticateJWT, authorizeRoles(Role.ADMIN), getProfitabilityReport);
+  app.get("/api/accounting/accounts", authenticateJWT, authorizeRoles(Role.ADMIN), getAccounts);
+  app.get("/api/accounting/journal", authenticateJWT, authorizeRoles(Role.ADMIN), getJournalEntries);
 
   // Staff Management Routes (Admin Only)
   app.use("/api/staff", authenticateJWT, authorizeRoles(Role.ADMIN), staffRoutes);
@@ -189,10 +203,12 @@ export function createServer() {
   app.get("/api/purchases/ingredient/:ingredientId", authenticateJWT, getPurchasesByIngredient);
   app.post("/api/purchases", authenticateJWT, recordPurchase);
   app.put("/api/purchases/:id", authenticateJWT, updatePurchase);
+  app.post("/api/purchases/:id/return", authenticateJWT, returnPurchase);
   app.delete("/api/purchases/:id", authenticateJWT, deletePurchase);
 
   // Finished Goods & Production Routes
   app.get("/api/finished-goods", authenticateJWT, getFinishedGoods);
+  app.get("/api/finished-goods/production-history", authenticateJWT, getProductionRecords);
   app.post("/api/finished-goods", authenticateJWT, createFinishedGood);
   app.put("/api/finished-goods/:id", authenticateJWT, updateFinishedGood);
   app.post("/api/finished-goods/:id/produce", authenticateJWT, produceFinishedGood);
@@ -219,6 +235,23 @@ export function createServer() {
   app.post("/api/assets", authenticateJWT, createAsset);
   app.put("/api/assets/:id", authenticateJWT, updateAsset);
   app.delete("/api/assets/:id", authenticateJWT, deleteAsset);
+
+  // Production Planning Routes
+  app.get("/api/production/prep-lists", authenticateJWT, getPrepLists);
+  app.post("/api/production/prep-lists", authenticateJWT, createPrepList);
+  app.patch("/api/production/prep-lists/:prepListId/items/:itemId/status", authenticateJWT, updatePrepItemStatus);
+  app.get("/api/production/forecast", authenticateJWT, getForecast);
+
+  // Initialize Accounting
+  (async () => {
+    try {
+      const { ensureAccounts } = await import("./lib/accounting-service");
+      await ensureAccounts();
+      console.log("Accounting accounts initialized");
+    } catch (error) {
+      console.error("Failed to initialize accounting accounts:", error);
+    }
+  })();
 
   return app;
 }

@@ -40,6 +40,7 @@ import {
   getStaffStats
 } from "@/lib/staff-api";
 import { toast } from "sonner";
+import { AdminHeader } from "@/components/layout/AdminHeader";
 
 const roleIcons: Record<string, string> = {
   admin: "👨‍💼",
@@ -102,162 +103,139 @@ export default function Staff() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-primary/10 p-1.5 rounded-lg">
-              <Leaf className="h-4 w-4 text-primary" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">
-              VenzoSmart • Talent & Culture
-            </span>
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tighter text-sidebar-foreground">
-            Team <span className="text-primary italic">Directory</span>
-          </h1>
-          <p className="text-muted-foreground mt-1 font-medium italic">
-            "Empowering the Culinary Craftsmen of Bhaktapur"
-          </p>
-        </div>
-        <Dialog open={isAddingStaff} onOpenChange={setIsAddingStaff}>
-          <DialogTrigger asChild>
-            <Button className="h-12 px-8 rounded-xl font-bold border-none shadow-xl shadow-primary/20 gap-2 transition-all hover:scale-[1.02]">
-              <Plus className="h-5 w-5" />
-              ONBOARD NEW MEMBER
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Staff Member</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddStaff} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="staff-name">Full Name</Label>
-                <Input
-                  id="staff-name"
-                  required
-                  value={staffForm.name}
-                  onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="staff-email">Email</Label>
-                <Input
-                  id="staff-email"
-                  type="email"
-                  required
-                  value={staffForm.email}
-                  onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="staff-phone">Phone</Label>
-                <Input
-                  id="staff-phone"
-                  required
-                  value={staffForm.phone}
-                  onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="staff-role">Role</Label>
-                <Select
-                  value={staffForm.role}
-                  onValueChange={(val: StaffMember["role"]) => setStaffForm({ ...staffForm, role: val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="chef">Chef</SelectItem>
-                    <SelectItem value="waiter">Waiter</SelectItem>
-                    <SelectItem value="delivery">Delivery</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="staff-salary">Salary (Optional)</Label>
-                <Input
-                  id="staff-salary"
-                  type="number"
-                  value={staffForm.salary}
-                  onChange={(e) => setStaffForm({ ...staffForm, salary: Number(e.target.value) })}
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="submit">Add Staff</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+    <div className="space-y-6">
+      <AdminHeader 
+        title="Staff Directory" 
+        subtitle="Manage your team members, roles, and performance"
+        actions={
+          <Dialog open={isAddingStaff} onOpenChange={setIsAddingStaff}>
+            <DialogTrigger asChild>
+              <Button className="font-bold gap-2">
+                <Plus className="h-4 w-4" />
+                ONBOARD NEW MEMBER
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Staff Member</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddStaff} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <Input
+                    required
+                    value={staffForm.name}
+                    onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      required
+                      value={staffForm.email}
+                      onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone</Label>
+                    <Input
+                      required
+                      value={staffForm.phone}
+                      onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Role</Label>
+                    <Select
+                      value={staffForm.role}
+                      onValueChange={(val: any) => setStaffForm({ ...staffForm, role: val })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
+                        <SelectItem value="chef">Chef</SelectItem>
+                        <SelectItem value="waiter">Waiter</SelectItem>
+                        <SelectItem value="delivery">Delivery</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Salary (Rs.)</Label>
+                    <Input
+                      type="number"
+                      value={staffForm.salary}
+                      onChange={(e) => setStaffForm({ ...staffForm, salary: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full">Add Staff Member</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="premium-card border-none shadow-lg overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Human Capital</p>
-                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">{staff.length}</p>
-                <p className="text-[10px] text-emerald-600 font-bold mt-2">{stats?.activeStaff || 0} active specialists</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Total Team</p>
+                <p className="text-2xl font-bold">{staff.length}</p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">{stats?.activeStaff || 0} active</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
-                <Users className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Users className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Monthly Yield</p>
-                <p className="text-3xl font-black tracking-tight text-emerald-700">
-                  Rs.{(stats?.monthlyPayroll || 0).toLocaleString()}
-                </p>
-                <p className="text-[10px] text-emerald-600 font-bold mt-2">Total payroll commitment</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Monthly Payroll</p>
+                <p className="text-2xl font-bold">Rs.{(stats?.monthlyPayroll || 0).toLocaleString()}</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
-                <ShieldCheck className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <ShieldCheck className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden">
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Performance Index</p>
-                <p className="text-3xl font-black tracking-tight text-sidebar-foreground">
-                  {stats?.avgPerformance || 0}<span className="text-sm text-muted-foreground">/100</span>
-                </p>
-                <p className="text-[10px] text-emerald-600 font-bold mt-2">Team aggregate score</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Avg Performance</p>
+                <p className="text-2xl font-bold">{stats?.avgPerformance || 0}%</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
-                <TrendingUp className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="premium-card border-none shadow-lg overflow-hidden relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-amber-400" />
+        <Card className="border shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/60 mb-1">Attendance Gap</p>
-                <p className="text-3xl font-black tracking-tight text-amber-600">{stats?.onLeaveCount || 0}</p>
-                <p className="text-[10px] text-amber-600 font-bold mt-2">Currently on leave</p>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">On Leave</p>
+                <p className="text-2xl font-bold text-amber-600">{stats?.onLeaveCount || 0}</p>
               </div>
-              <div className="h-12 w-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-sm">
-                <AlertCircle className="h-6 w-6" />
+              <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <AlertCircle className="h-5 w-5" />
               </div>
             </div>
           </CardContent>
