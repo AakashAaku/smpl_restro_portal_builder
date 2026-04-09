@@ -1,0 +1,498 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useState, useEffect } from "react";
+import { Plus, Clock, TrendingUp, AlertCircle, Loader2, Leaf, Sparkles, ChefHat, Timer, Zap, ClipboardList } from "lucide-react";
+import { toast } from "sonner";
+import { AdminHeader } from "@/components/layout/AdminHeader";
+import {
+  getPrepLists,
+  createPrepList,
+  updatePrepItemStatus,
+  getForecast,
+  type PrepList,
+  type PrepItem
+} from "@/lib/production-api";
+
+export default function Production() {
+  const [prepLists, setPrepLists] = useState<PrepList[]>([]);
+  const [forecast, setForecast] = useState<any[]>([]);
+  const [selectedShift, setSelectedShift] = useState("all");
+  const [isAddingPrepList, setIsAddingPrepList] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [listData, forecastData] = await Promise.all([
+        getPrepLists(),
+        getForecast()
+      ]);
+      setPrepLists(listData);
+      setForecast(forecastData);
+    } catch (error) {
+      toast.error("Failed to load production planning data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredPrepLists =
+    selectedShift === "all"
+      ? prepLists
+      : prepLists.filter((p) => p.shift === selectedShift);
+
+  const totalPrepItems = prepLists.reduce((sum, p) => sum + p.items.length, 0);
+  const completedItems = prepLists.reduce(
+    (sum, p) =>
+      sum + p.items.filter((i) => i.status === "completed").length,
+    0
+  );
+  const inProgressItems = prepLists.reduce(
+    (sum, p) =>
+      sum + p.items.filter((i) => i.status === "in-progress").length,
+    0
+  );
+
+  const totalPrepTime = prepLists.reduce(
+    (sum, p) => sum + p.items.reduce((itemSum, i) => itemSum + i.prepTime, 0),
+    0
+  );
+
+  const handleAddPrepList = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (forecast.length === 0) {
+        toast.error("No forecast data available to create prep list");
+        return;
+      }
+
+      // Collect form values
+      const form = e.target as HTMLFormElement;
+      const date = (form.querySelector('input[type="date"]') as HTMLInputElement).value;
+      const shift = (form.querySelector('button[role="combobox"] span') as HTMLElement)?.innerText.split(' ')[0].toLowerCase() as any;
+      const expectedOrders = parseInt((form.querySelector('input[type="number"]') as HTMLInputElement).value) || 50;
+
+      const payload = {
+        date,
+        shift: shift || "morning",
+        items: forecast.map(f => ({
+          itemName: f.itemName,
+          category: f.category,
+          expectedOrders: Math.round(f.expectedOrders * (expectedOrders / 50)), // Scale based on input
+          prepQuantity: Math.round(f.prepQuantity * (expectedOrders / 50)),
+          prepTime: f.prepTime || 30,
+          status: "pending"
+        }))
+      };
+
+      await createPrepList(payload);
+      toast.success("Production prep list generated successfully");
+      setIsAddingPrepList(false);
+      loadData();
+    } catch (error) {
+      toast.error("Failed to create prep list");
+    }
+  };
+
+  const handleStatusUpdate = async (prepListId: number, itemId: number, newStatus: string) => {
+    try {
+      const response = await updatePrepItemStatus(prepListId, itemId, newStatus);
+      toast.success(`Item marked as ${newStatus}`);
+      
+      // Check for inventory alerts
+      if (response && response.alerts && response.alerts.length > 0) {
+          response.alerts.forEach((alertMsg: string) => {
+              toast.error(alertMsg, { duration: 8000 });
+          });
+      }
+
+      loadData();
+    } catch (error) {
+      toast.error("Failed to update status");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <AdminHeader 
+        title="Production Planning" 
+        subtitle="Manage preparatory list and demand forecasting"
+        actions={
+          <Dialog open={isAddingPrepList} onOpenChange={setIsAddingPrepList}>
+            <DialogTrigger asChild>
+              <Button className="font-bold gap-2">
+                <Plus className="h-4 w-4" />
+                GENERATE PREP LIST
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Prep List</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddPrepList} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Input
+                    type="date"
+                    defaultValue={new Date().toISOString().split("T")[0]}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Shift</Label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select shift" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="morning">Morning (6 AM - 12 PM)</SelectItem>
+                      <SelectItem value="afternoon">Afternoon (12 PM - 6 PM)</SelectItem>
+                      <SelectItem value="evening">Evening (6 PM - 12 AM)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Expected Orders</Label>
+                  <Input type="number" placeholder="50" />
+                </div>
+                <Button type="submit" className="w-full">Create Prep List</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Queue Density</p>
+                <p className="text-2xl font-bold">{totalPrepItems}</p>
+                <p className="text-[10px] text-emerald-600 font-bold mt-2">{completedItems} finalized cycles</p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <ClipboardList className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Active Prep</p>
+                <p className="text-2xl font-bold text-amber-600">{inProgressItems}</p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Timer className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Labor Commitment</p>
+                <p className="text-2xl font-bold">
+                  {Math.round(totalPrepTime / 60)}<span className="text-sm text-muted-foreground">h</span>
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Clock className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">Efficiency</p>
+                <p className="text-2xl font-bold text-emerald-700">
+                  {totalPrepItems > 0 ? Math.round((completedItems / totalPrepItems) * 100) : 0}%
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Zap className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="prep-lists" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="prep-lists">Prep Lists</TabsTrigger>
+          <TabsTrigger value="forecast">Demand Forecast</TabsTrigger>
+          <TabsTrigger value="kitchen">Kitchen Station</TabsTrigger>
+        </TabsList>
+
+        {/* Prep Lists Tab */}
+        <TabsContent value="prep-lists" className="space-y-6">
+          <div className="flex gap-4 items-center">
+            <Label>Filter by Shift:</Label>
+            <Select value={selectedShift} onValueChange={setSelectedShift}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Shifts</SelectItem>
+                <SelectItem value="morning">Morning</SelectItem>
+                <SelectItem value="afternoon">Afternoon</SelectItem>
+                <SelectItem value="evening">Evening</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {filteredPrepLists.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No prep lists found for the selected shift.</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredPrepLists.map((prepList) => (
+              <Card key={prepList.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-semibold text-lg capitalize">
+                        {prepList.shift} Shift - {prepList.date}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {prepList.items.length} items to prepare
+                      </p>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${prepList.status === "completed"
+                        ? "bg-green-100 text-green-800"
+                        : prepList.status === "in-progress"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-gray-100 text-gray-800"
+                        }`}
+                    >
+                      {prepList.status === "completed"
+                        ? "Completed"
+                        : prepList.status === "in-progress"
+                          ? "In Progress"
+                          : "Pending"}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-3 px-4 font-medium text-sm">
+                            Item
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-sm">
+                            Category
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-sm">
+                            Expected Orders
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-sm">
+                            Prep Quantity
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-sm">
+                            Prep Time
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-sm">
+                            Assigned To
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-sm">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {prepList.items.map((item) => (
+                          <tr
+                            key={item.id}
+                            className="border-b border-border hover:bg-secondary/30"
+                          >
+                            <td className="py-4 px-4 font-medium">
+                              {item.itemName}
+                            </td>
+                            <td className="py-4 px-4">{item.category}</td>
+                            <td className="py-4 px-4">{item.expectedOrders}</td>
+                            <td className="py-4 px-4">{item.prepQuantity}</td>
+                            <td className="py-4 px-4">{item.prepTime} min</td>
+                            <td className="py-4 px-4">
+                              {item.assignedTo || "—"}
+                            </td>
+                            <td className="py-4 px-4">
+                              <Select
+                                value={item.status}
+                                onValueChange={(val) => handleStatusUpdate(prepList.id, item.id, val)}
+                              >
+                                <SelectTrigger className="w-[130px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="in-progress">In Progress</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        {/* Forecast Tab */}
+        <TabsContent value="forecast">
+          <Card>
+            <CardHeader>
+              <CardTitle>7-Day Demand Forecast</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {forecast.map((data) => (
+                  <div key={data.day} className="flex items-center justify-between py-3 border-b border-border last:border-b-0">
+                    <div className="w-16 font-medium">{data.day}</div>
+                    <div className="flex-1 max-w-sm">
+                      <div className="flex gap-2 items-center">
+                        <div className="flex-1">
+                          <div className="h-8 bg-secondary rounded overflow-hidden">
+                            <div
+                              className="h-full bg-primary"
+                              style={{ width: `${(data.expected / 100) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-right min-w-24">
+                          <p className="font-semibold">{data.expected} orders</p>
+                          <p className="text-xs text-muted-foreground">
+                            vs {data.avg} avg
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Kitchen Station Tab */}
+        <TabsContent value="kitchen">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {prepLists.some(p => p.items.some(i => i.category === "Main Course")) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Main Course Station</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {prepLists.flatMap(p => p.items)
+                      .filter(i => i.category === "Main Course")
+                      .map(item => (
+                        <div key={item.id} className={`p-3 border-l-4 rounded ${item.status === 'completed' ? 'border-green-500 bg-green-50' :
+                          item.status === 'in-progress' ? 'border-amber-500 bg-amber-50' :
+                            'border-gray-400 bg-gray-50'
+                          }`}>
+                          <p className="font-medium">{item.itemName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Prep Time: {item.prepTime} min | Qty: {item.prepQuantity}
+                          </p>
+                          <p className={`text-xs font-semibold mt-1 ${item.status === 'completed' ? 'text-green-700' :
+                            item.status === 'in-progress' ? 'text-amber-700' :
+                              'text-gray-700'
+                            }`}>
+                            {item.status === 'completed' ? '✓ Completed' :
+                              item.status === 'in-progress' ? 'In Progress' :
+                                'Pending'}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {prepLists.some(p => p.items.some(i => i.category === "Breads")) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Breads Station</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {prepLists.flatMap(p => p.items)
+                      .filter(i => i.category === "Breads")
+                      .map(item => (
+                        <div key={item.id} className={`p-3 border-l-4 rounded ${item.status === 'completed' ? 'border-green-500 bg-green-50' :
+                          item.status === 'in-progress' ? 'border-amber-500 bg-amber-50' :
+                            'border-gray-400 bg-gray-50'
+                          }`}>
+                          <p className="font-medium">{item.itemName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Prep Time: {item.prepTime} min | Qty: {item.prepQuantity}
+                          </p>
+                          <p className={`text-xs font-semibold mt-1 ${item.status === 'completed' ? 'text-green-700' :
+                            item.status === 'in-progress' ? 'text-amber-700' :
+                              'text-gray-700'
+                            }`}>
+                            {item.status === 'completed' ? '✓ Completed' :
+                              item.status === 'in-progress' ? 'In Progress' :
+                                'Pending'}
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
