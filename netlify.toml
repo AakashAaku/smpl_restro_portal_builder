@@ -1,5 +1,5 @@
 [build]
-  command = "prisma generate && npm run build:client"
+  command = "prisma generate && prisma db push --accept-data-loss && prisma db seed && npm run build:client"
   functions = "netlify/functions"
   publish = "dist/spa"
 
