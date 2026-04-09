@@ -1,6 +1,8 @@
 import { RequestHandler } from "express";
 import prisma from "../lib/prisma";
-import { MovementType } from "@prisma/client";
+import pkg from "@prisma/client";
+const { MovementType } = pkg;
+import type { MovementType as MovementTypeType } from "@prisma/client";
 
 export const getIngredients: RequestHandler = async (_req, res) => {
   try {
@@ -200,7 +202,7 @@ export const recordStockMovement: RequestHandler = async (req, res) => {
       return tx.stockMovement.create({
         data: {
           ingredientId,
-          type: type as MovementType,
+          type: type as MovementTypeType,
           quantity: parseFloat(quantity),
           reason,
         },

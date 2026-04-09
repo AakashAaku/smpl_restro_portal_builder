@@ -1,6 +1,8 @@
 import { RequestHandler } from "express";
 import prisma from "../lib/prisma";
-import { OrderStatus } from "@prisma/client";
+import pkg from "@prisma/client";
+const { OrderStatus } = pkg;
+import type { OrderStatus as OrderStatusType } from "@prisma/client";
 
 export const getOrdersByCustomer: RequestHandler = async (req, res) => {
   try {
@@ -184,7 +186,7 @@ export const updateOrderStatus: RequestHandler = async (req, res) => {
 
     const updatedOrder = await prisma.order.update({
       where: { id },
-      data: { status: status.toUpperCase() as OrderStatus },
+      data: { status: status.toUpperCase() as OrderStatusType },
     });
 
     res.json(updatedOrder);
@@ -222,7 +224,7 @@ export const cancelOrder: RequestHandler = async (req, res) => {
 
     const cancelledOrder = await prisma.order.update({
       where: { id },
-      data: { status: OrderStatus.CANCELLED },
+      data: { status: OrderStatus.CANCELLED as OrderStatusType },
     });
 
     res.json({ message: "Order cancelled", order: cancelledOrder });
@@ -240,7 +242,7 @@ export const getOrdersByStatus: RequestHandler = async (req, res) => {
     const { status } = req.params;
 
     const orders = await prisma.order.findMany({
-      where: { status: (status as string).toUpperCase() as OrderStatus },
+      where: { status: (status as string).toUpperCase() as OrderStatusType },
       include: {
         orderItems: {
           include: { menuItem: true },

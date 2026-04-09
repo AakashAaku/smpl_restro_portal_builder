@@ -1,5 +1,7 @@
 import prisma from "./prisma";
-import { AccountType, EntryType } from "@prisma/client";
+import pkg from "@prisma/client";
+const { AccountType, EntryType } = pkg;
+import type { AccountType as AccountTypeType, EntryType as EntryTypeType } from "@prisma/client";
 
 export const CHART_OF_ACCOUNTS = [
   { code: "1001", name: "Cash on Hand", type: AccountType.ASSET },
@@ -27,7 +29,7 @@ export async function createJournalEntry(tx: any, data: {
   description: string;
   reference?: string;
   orderId?: string;
-  entries: { accountCode: string; amount: number; type: EntryType }[];
+  entries: { accountCode: string; amount: number; type: EntryTypeType }[];
 }) {
   // Validate balance: Sum (Debits) should equal Sum (Credits)
   const debits = data.entries.filter(e => e.type === EntryType.DEBIT).reduce((sum, e) => sum + e.amount, 0);

@@ -1,7 +1,9 @@
 import { Router, RequestHandler } from "express";
 import prisma from "../lib/prisma";
 import bcrypt from "bcryptjs";
-import { Role } from "@prisma/client";
+import pkg from "@prisma/client";
+const { Role } = pkg;
+import type { Role as RoleType } from "@prisma/client";
 
 const router = Router();
 
@@ -50,7 +52,7 @@ export const createUser: RequestHandler = async (req, res) => {
         email,
         password: hashedPassword,
         name,
-        role: role as Role,
+        role: role as RoleType,
       },
       select: {
         id: true,
@@ -76,7 +78,7 @@ export const updateUser: RequestHandler = async (req, res) => {
     const dataToUpdate: any = { email, name };
     
     if (role) {
-      dataToUpdate.role = role as Role;
+      dataToUpdate.role = role as RoleType;
     }
     
     if (password && password.trim() !== '') {
