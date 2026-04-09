@@ -1,4 +1,4 @@
-import pkg from '@prisma/client';
+import pkg from '../server/generated/client';
 const { PrismaClient, Role, OrderStatus, MovementType } = pkg;
 import bcrypt from 'bcryptjs';
 

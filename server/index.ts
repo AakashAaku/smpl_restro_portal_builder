@@ -109,9 +109,9 @@ import {
 import { login, getMe } from "./routes/auth";
 import userRoutes from "./routes/users";
 import { authenticateJWT, authorizeRoles } from "./middleware/auth";
-import pkg from "@prisma/client";
+import pkg from "./generated/client";
 const { Role } = pkg;
-import type { Role as RoleType } from "@prisma/client";
+import type { Role as RoleType } from "./generated/client";
 
 export function createServer() {
   const app = express();

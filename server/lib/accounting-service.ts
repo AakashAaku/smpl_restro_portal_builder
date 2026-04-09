@@ -1,7 +1,7 @@
 import prisma from "./prisma";
-import pkg from "@prisma/client";
+import pkg from "../generated/client";
 const { AccountType, EntryType } = pkg;
-import type { AccountType as AccountTypeType, EntryType as EntryTypeType } from "@prisma/client";
+import type { AccountType as AccountTypeType, EntryType as EntryTypeType } from "../generated/client";
 
 export const CHART_OF_ACCOUNTS = [
   { code: "1001", name: "Cash on Hand", type: AccountType.ASSET },

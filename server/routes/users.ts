@@ -1,9 +1,9 @@
 import { Router, RequestHandler } from "express";
 import prisma from "../lib/prisma";
 import bcrypt from "bcryptjs";
-import pkg from "@prisma/client";
+import pkg from "../generated/client";
 const { Role } = pkg;
-import type { Role as RoleType } from "@prisma/client";
+import type { Role as RoleType } from "../generated/client";
 
 const router = Router();
 

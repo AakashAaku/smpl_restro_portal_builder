@@ -1,8 +1,8 @@
 import { RequestHandler } from "express";
 import prisma from "../lib/prisma";
-import pkg from "@prisma/client";
+import pkg from "../generated/client";
 const { OrderStatus } = pkg;
-import type { OrderStatus as OrderStatusType } from "@prisma/client";
+import type { OrderStatus as OrderStatusType } from "../generated/client";
 
 export const getOrdersByCustomer: RequestHandler = async (req, res) => {
   try {

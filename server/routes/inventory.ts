@@ -1,8 +1,8 @@
 import { RequestHandler } from "express";
 import prisma from "../lib/prisma";
-import pkg from "@prisma/client";
+import pkg from "../generated/client";
 const { MovementType } = pkg;
-import type { MovementType as MovementTypeType } from "@prisma/client";
+import type { MovementType as MovementTypeType } from "../generated/client";
 
 export const getIngredients: RequestHandler = async (_req, res) => {
   try {
