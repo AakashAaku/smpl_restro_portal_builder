@@ -9,16 +9,23 @@ const { PrismaClient } = pkg;
 neonConfig.webSocketConstructor = ws;
 
 const prismaClientSingleton = () => {
-    const connectionString = process.env.DATABASE_URL;
+    const connectionString = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
     
-    // If we have a DATABASE_URL, use the Neon adapter for better performance on serverless
-    if (connectionString && connectionString.includes('neon.tech')) {
+    if (!connectionString) {
+        throw new Error(
+            "DATABASE_URL or NETLIFY_DATABASE_URL is not set. " +
+            "Please ensure you have configured your environment variables in the Netlify Dashboard."
+        );
+    }
+    
+    // If we have a Neon connection string, use the specialized adapter
+    if (connectionString.includes('neon.tech')) {
         const pool = new Pool({ connectionString });
         const adapter = new PrismaNeon(pool);
         return new PrismaClient({ adapter });
     }
     
-    // Fallback to default behavior for local or other databases
+    // Fallback for non-Neon databases
     return new PrismaClient();
 };
 
