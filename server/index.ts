@@ -121,11 +121,33 @@ export function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Fix for empty body in serverless environments (Netlify/Lambda)
-  app.use((req, res, next) => {
-    if (req.method === "POST" && req.body && typeof req.body === "string") {
+  // Enhanced Fix for empty body in serverless environments (Netlify/Lambda)
+  app.use((req: any, res, next) => {
+    // If body is already a non-empty object, skip
+    if (req.body && typeof req.body === "object" && Object.keys(req.body).length > 0) {
+      return next();
+    }
+
+    let rawBody = req.body;
+    let decodedBody: string | null = null;
+
+    // 1. Check if the body is in the internal event (common in Netlify/Lambda)
+    const event = req.apiGateway?.event;
+    if (event && event.body) {
+      decodedBody = event.isBase64Encoded 
+        ? Buffer.from(event.body, 'base64').toString() 
+        : event.body;
+    } 
+    // 2. Fallback to checking the standard req.body if it's a string or Buffer
+    else if (typeof rawBody === "string") {
+      decodedBody = rawBody;
+    } else if (Buffer.isBuffer(rawBody)) {
+      decodedBody = rawBody.toString();
+    }
+
+    if (decodedBody) {
       try {
-        req.body = JSON.parse(req.body);
+        req.body = JSON.parse(decodedBody);
       } catch (err) {
         // Not a JSON string, ignore
       }
