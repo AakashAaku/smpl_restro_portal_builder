@@ -6,8 +6,6 @@
 [functions]
   node_bundler = "esbuild"
   included_files = ["server/generated/client/**"]
-  # Ensure these are bundled correctly for serverless
-  external_node_modules = ["@prisma/client", "ws", "@neondatabase/serverless", "@prisma/adapter-neon"]
 
 [[redirects]]
   force = true
