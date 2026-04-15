@@ -3,13 +3,20 @@
   functions = "netlify/functions"
   publish = "dist/spa"
 
-
 [functions]
   node_bundler = "esbuild"
   included_files = ["server/generated/client/**"]
-  
+  # Ensure these are bundled correctly for serverless
+  external_node_modules = ["@prisma/client", "ws", "@neondatabase/serverless", "@prisma/adapter-neon"]
+
 [[redirects]]
   force = true
   from = "/api/*"
   status = 200
   to = "/.netlify/functions/api/:splat"
+
+# Catch-all for SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
