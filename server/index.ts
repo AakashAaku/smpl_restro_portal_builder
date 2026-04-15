@@ -121,6 +121,18 @@ export function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Fix for empty body in serverless environments (Netlify/Lambda)
+  app.use((req, res, next) => {
+    if (req.method === "POST" && req.body && typeof req.body === "string") {
+      try {
+        req.body = JSON.parse(req.body);
+      } catch (err) {
+        // Not a JSON string, ignore
+      }
+    }
+    next();
+  });
+
   // Health check
   app.get("/api/ping", (_req, res) => {
     const ping = process.env.PING_MESSAGE ?? "ping";
