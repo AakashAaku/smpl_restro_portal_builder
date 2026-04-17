@@ -148,9 +148,13 @@ export function createServer() {
     if (decodedBody) {
       try {
         req.body = JSON.parse(decodedBody);
-      } catch (err) {
-        // Not a JSON string, ignore
+      } catch (err: any) {
+        // Log the exact error and decoded body in the request so we can return it as an error
+        req.body = { ...req.body, _debug_parse_error: err.message, _debug_raw: decodedBody };
       }
+    } else {
+        // Record what information we had
+        req.body = { ...req.body, _debug_no_decoded_body: true, _debug_event: !!req.apiGateway?.event };
     }
     next();
   });
