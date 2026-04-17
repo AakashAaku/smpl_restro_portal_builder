@@ -1,3 +1,4 @@
+import "dotenv/config";
 import pkg from "../generated/client";
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { PrismaNeon } from '@prisma/adapter-neon';
@@ -9,13 +10,17 @@ const { PrismaClient } = pkg;
 neonConfig.webSocketConstructor = ws;
 
 const prismaClientSingleton = () => {
-    const connectionString = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
+    const connectionString = process.env.DATABASE_URL || process.env.NET_DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
     
     if (!connectionString) {
-        throw new Error(
-            "DATABASE_URL or NETLIFY_DATABASE_URL is not set. " +
-            "Please ensure you have configured your environment variables in the Netlify Dashboard."
-        );
+        if (process.env.NODE_ENV === "production") {
+            throw new Error(
+                "DATABASE_URL is not set. Please ensure you have configured your environment variables in the Netlify Dashboard."
+            );
+        } else {
+            console.warn("⚠️ DATABASE_URL is not set in your .env file. Database features will not work.");
+            return new PrismaClient();
+        }
     }
     
     // If we have a Neon connection string, use the specialized adapter
