@@ -5,12 +5,37 @@ import { createServer } from "../../server";
 const innerApp = createServer();
 const app = express();
 
-// Expose the API under both the raw Netlify functions path and root
-// Netlify redirects /api/* to /.netlify/functions/api/*
-// When it reaches here, the path is /.netlify/functions/api/something
-// Stripping /.netlify/functions makes it /api/something, which matches our routes!
-app.use("/.netlify/functions", innerApp);
-app.use("/", innerApp);
+// Bulletproof URL rewriting for Netlify Functions
+app.use((req, res, next) => {
+    // Netlify or serverless-http can pass the URL in various formats.
+    // Clean it up to ensure it always evaluates as `/api/...` for our routers.
+    let url = req.url;
+    
+    // Strip /.netlify/functions if present
+    if (url.startsWith('/.netlify/functions')) {
+        url = url.replace('/.netlify/functions', '');
+    }
+    
+    // Strip redundant /api if it became /api/api/...
+    if (url.startsWith('/api/api/')) {
+        url = url.replace('/api/api/', '/api/');
+    }
+    
+    // If it doesn't start with /api after stripping, add it
+    // (e.g. if the function received `/auth/login` directly)
+    if (!url.startsWith('/api')) {
+        url = '/api' + (url.startsWith('/') ? '' : '/') + url;
+    }
+    
+    req.url = url;
+    next();
+});
 
-export const handler = serverless(app);
+app.use(innerApp);
 
+export const handler = serverless(app, {
+    request: function(req: any, event: any, context: any) {
+        // Expose the raw event so our base64 body parser in server/index.ts can use it!
+        req.apiGateway = { event, context };
+    }
+});
