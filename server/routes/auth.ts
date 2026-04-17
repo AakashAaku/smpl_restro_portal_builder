@@ -11,11 +11,7 @@ export const login: RequestHandler = async (req, res) => {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            res.status(400).json({ 
-                 error: 'Email and password required',
-                 debug_body: req.body,
-                 debug_headers: req.headers
-            });
+            res.status(400).json({ error: 'Email and password required' });
             return;
         }
 

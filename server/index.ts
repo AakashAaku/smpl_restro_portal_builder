@@ -123,8 +123,8 @@ export function createServer() {
 
   // Enhanced Fix for empty body in serverless environments (Netlify/Lambda)
   app.use((req: any, res, next) => {
-    // If body is already a non-empty object, skip
-    if (req.body && typeof req.body === "object" && Object.keys(req.body).length > 0) {
+    // If body is already a parsed generic object (not a Buffer), skip
+    if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body) && Object.keys(req.body).length > 0) {
       return next();
     }
 
@@ -138,24 +138,26 @@ export function createServer() {
         ? Buffer.from(event.body, 'base64').toString() 
         : event.body;
     } 
-    // 2. Fallback to checking the standard req.body if it's a string or Buffer
-    else if (typeof rawBody === "string") {
-      decodedBody = rawBody;
-    } else if (Buffer.isBuffer(rawBody)) {
+    // 2. Fallback to checking the standard req.body if it's a Buffer (which it usually is in serverless-http) or string
+    else if (Buffer.isBuffer(rawBody)) {
       decodedBody = rawBody.toString();
+    } else if (typeof rawBody === "string") {
+      decodedBody = rawBody;
     }
 
     if (decodedBody) {
       try {
         req.body = JSON.parse(decodedBody);
-      } catch (err: any) {
-        // Log the exact error and decoded body in the request so we can return it as an error
-        req.body = { ...req.body, _debug_parse_error: err.message, _debug_raw: decodedBody };
+      } catch (err) {
+        // Not a JSON string, ignore
       }
-    } else {
-        // Record what information we had
-        req.body = { ...req.body, _debug_no_decoded_body: true, _debug_event: !!req.apiGateway?.event };
     }
+    
+    // If it's still a buffer (e.g. invalid JSON), clear it to an empty object to avoid confusing routes later
+    if (Buffer.isBuffer(req.body)) {
+      req.body = {};
+    }
+    
     next();
   });
 
