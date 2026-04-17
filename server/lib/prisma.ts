@@ -23,9 +23,15 @@ const prismaClientSingleton = () => {
         }
     }
     
+    // Clean up potential literal quotes that Netlify UI might inject
+    let cleanUrl = connectionString.trim();
+    if (cleanUrl.startsWith('"') && cleanUrl.endsWith('"')) {
+        cleanUrl = cleanUrl.substring(1, cleanUrl.length - 1);
+    }
+    
     // If we have a Neon connection string, use the specialized adapter
-    if (connectionString.includes('neon.tech')) {
-        const pool = new Pool({ connectionString });
+    if (cleanUrl.includes('neon.tech')) {
+        const pool = new Pool({ connectionString: cleanUrl });
         const adapter = new PrismaNeon(pool);
         return new PrismaClient({ adapter });
     }
