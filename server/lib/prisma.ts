@@ -10,7 +10,10 @@ const { PrismaClient } = pkg;
 neonConfig.webSocketConstructor = ws;
 
 const prismaClientSingleton = () => {
-    const connectionString = process.env.DATABASE_URL || process.env.NET_DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
+    const connectionString = process.env.DATABASE_URL || 
+        process.env.NET_DATABASE_URL || 
+        process.env.NETLIFY_DATABASE_URL || 
+        "postgresql://neondb_owner:npg_U7dh6JuHAkyq@ep-lively-thunder-ankua0j1-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
     
     if (!connectionString) {
         if (process.env.NODE_ENV === "production") {
