@@ -4,7 +4,7 @@
   publish = "dist/spa"
 
 [build.environment]
-  DATABASE_URL = "postgresql://neondb_owner:npg_U7dh6JuHAkyq@ep-lively-thunder-ankua0j1-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+  DATABASE_URL = "postgres://neondb_owner:npg_U7dh6JuHAkyq@ep-lively-thunder-ankua0j1-pooler.c-6.us-east-1.aws.neon.tech/neondb"
   JWT_SECRET = "your-secret-key-123"
 
 [functions]
