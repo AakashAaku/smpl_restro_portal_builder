@@ -9,38 +9,24 @@ const { PrismaClient } = pkg;
 // This is required for @neondatabase/serverless to work in Node.js
 neonConfig.webSocketConstructor = ws;
 
+// We completely bypass @neondatabase/serverless adapter since the user provided a "pooler" URL
+// Neon's PgBouncer pooler URL supports native TCP via Prisma rust engine which is vastly more stable.
+
 const prismaClientSingleton = () => {
-    const connectionString = process.env.DATABASE_URL || 
-        process.env.NET_DATABASE_URL || 
-        process.env.NETLIFY_DATABASE_URL || 
-        "postgres://neondb_owner:npg_U7dh6JuHAkyq@ep-lively-thunder-ankua0j1-pooler.c-6.us-east-1.aws.neon.tech/neondb";
+    // Definitive URL provided by user
+    const targetUrl = "postgres://neondb_owner:npg_U7dh6JuHAkyq@ep-lively-thunder-ankua0j1-pooler.c-6.us-east-1.aws.neon.tech/neondb";
     
-    if (!connectionString) {
-        if (process.env.NODE_ENV === "production") {
-            throw new Error(
-                "DATABASE_URL is not set. Please ensure you have configured your environment variables in the Netlify Dashboard."
-            );
-        } else {
-            console.warn("⚠️ DATABASE_URL is not set in your .env file. Database features will not work.");
-            return new PrismaClient();
+    // Explicitly guarantee the environment variable is set for Prisma engine to pick it up internally if needed
+    process.env.DATABASE_URL = targetUrl;
+    
+    // Force the datasource URL directly
+    return new PrismaClient({
+        datasources: {
+            db: {
+                url: targetUrl
+            }
         }
-    }
-    
-    // Clean up potential literal quotes that Netlify UI might inject
-    let cleanUrl = connectionString.trim();
-    if (cleanUrl.startsWith('"') && cleanUrl.endsWith('"')) {
-        cleanUrl = cleanUrl.substring(1, cleanUrl.length - 1);
-    }
-    
-    // If we have a Neon connection string, use the specialized adapter
-    if (cleanUrl.includes('neon.tech')) {
-        const pool = new Pool({ connectionString: cleanUrl });
-        const adapter = new PrismaNeon(pool);
-        return new PrismaClient({ adapter });
-    }
-    
-    // Fallback for non-Neon databases
-    return new PrismaClient();
+    });
 };
 
 declare global {
